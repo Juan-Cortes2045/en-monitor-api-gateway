@@ -44,5 +44,6 @@ client ──► nginx (HTTPS) ──► gateway :8080
 
 ## Migration status
 
-Phase 5 of the security service migration (see en-monitor-security-service `docs/Architecture.md`).
-The containers, compose files, nginx and CI of the three services are phase 6.
+Phase 5 of the security service migration (see en-monitor-security-service `docs/Architecture.md`)
+added the gateway; phase 6 runs it in the infra compose files behind the web container's nginx,
+with its own CI/CD workflow.
