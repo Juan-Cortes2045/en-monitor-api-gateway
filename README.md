@@ -66,6 +66,22 @@ so a client cannot choose the address the rate limit counts. Not every private n
 a machine of the LAN could otherwise pass as `127.0.0.1`. The gateway appends that address to
 `X-Forwarded-For` for the services, which trust it the same way.
 
+## Docker and CI/CD
+
+```bash
+docker build -t energy-monitor-gateway .
+```
+
+The infra repository builds the image and runs it in front of the other two services
+(`infra/docker-compose.yml`, `infra/docker-compose.prod.yml`). There it publishes no port: the
+web container's nginx forwards `/api/` to `gateway:8080`, the services are reached as
+`security:8082` and `backend:8083`, and it receives only `public.pem`. Its container health is
+`/actuator/health`.
+
+`.github/workflows/ci-cd.yml` runs `./mvnw test` on every pull request and push to `dev` and
+`main`, and after a push to `main` (and the approval of the `production` environment) deploys it
+with `infra/deploy/deploy.sh gateway`.
+
 ## Tests
 
 ```bash
