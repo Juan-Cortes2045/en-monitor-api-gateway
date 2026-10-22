@@ -37,5 +37,3 @@ build/
 src/main/resources/application-local.yaml
 # RSA keys
 *.pem
-
-.github
