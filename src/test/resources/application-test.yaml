@@ -1,0 +1,10 @@
+# Test profile: the services and the public key are set by each test class.
+spring:
+  http:
+    clients:
+      read-timeout: 1s
+
+gateway:
+  rate-limit:
+    requests: 3
+    window: 1m
