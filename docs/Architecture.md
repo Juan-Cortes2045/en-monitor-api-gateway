@@ -21,6 +21,7 @@ client ──► nginx (HTTPS) ──► gateway :8080
                                │ 3. token: required except on the public account endpoints
                                │ 4. route: Origin dropped, X-Forwarded-For appended
                                ├──► en-monitor-security-service :8082   /api/v1/auth/**, /api/v1/admin/users|roles/**
+                               ├──► en-monitor-device-service :8084     /api/v1/homes/*/devices/**, /api/v1/appliance-types/**
                                └──► energy-monitor-backend :8083        any other /api/v1/**
 ```
 
@@ -40,6 +41,9 @@ client ──► nginx (HTTPS) ──► gateway :8080
   network, with their own token.
 - **The rate limit is in memory.** It is per instance and starts again on restart; enough for one
   instance. Several instances would need a shared store (Redis).
+- **Routes by path prefix, most specific first.** The device routes are matched before the
+  backend's `/api/v1/**`, so moving a module out of the backend only adds a route here; the paths
+  the clients call do not change.
 - **Apache HttpClient 5** forwards the requests: the JDK client fails on a `DELETE` without a body.
 
 ## Migration status
@@ -47,3 +51,6 @@ client ──► nginx (HTTPS) ──► gateway :8080
 Phase 5 of the security service migration (see en-monitor-security-service `docs/Architecture.md`)
 added the gateway; phase 6 runs it in the infra compose files behind the web container's nginx,
 with its own CI/CD workflow.
+
+The device service migration (see en-monitor-device-service) added the route to the devices of a
+home and the appliance catalogue; the clients call the same paths as before.
