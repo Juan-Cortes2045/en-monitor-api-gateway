@@ -61,6 +61,31 @@ class GatewaySecurityTest extends GatewayTest {
         assertThat(SECURITY_SERVICE.received()).isEmpty();
     }
 
+    @Test
+    void protectsTheDeviceRoutes() throws Exception {
+        mvc.perform(get("/api/v1/homes/H1/devices")).andExpect(status().isUnauthorized());
+        mvc.perform(get("/api/v1/appliance-types")).andExpect(status().isUnauthorized());
+        mvc.perform(get("/api/v1/homes/H1/devices")
+                        .header("Authorization", "Bearer " + TestTokens.expired("use0000001")))
+                .andExpect(status().isUnauthorized());
+
+        assertThat(DEVICE_SERVICE.received()).isEmpty();
+    }
+
+    @Test
+    void neverForwardsTheBrokerAuthentication() throws Exception {
+        mvc.perform(post("/internal/mqtt/auth/user").contentType("application/json")
+                        .content("{\"username\":\"ABC123\",\"password\":\"x\"}"))
+                .andExpect(status().isUnauthorized());
+        mvc.perform(post("/internal/mqtt/auth/acl").header("Authorization", bearer("use0000001")))
+                .andExpect(status().isForbidden());
+        mvc.perform(get("/internal/devices/D1").header("Authorization", bearer("use0000001")))
+                .andExpect(status().isForbidden());
+
+        assertThat(DEVICE_SERVICE.received()).isEmpty();
+        assertThat(BACKEND.received()).isEmpty();
+    }
+
     @ParameterizedTest
     @ValueSource(strings = {"/api/v1/auth/register", "/api/v1/auth/google", "/api/v1/auth/refresh",
             "/api/v1/auth/password/forgot", "/api/v1/auth/password/reset",
@@ -82,6 +107,7 @@ class GatewaySecurityTest extends GatewayTest {
                 .andExpect(jsonPath("$.status").value(403));
 
         assertThat(SECURITY_SERVICE.received()).isEmpty();
+        assertThat(DEVICE_SERVICE.received()).isEmpty();
         assertThat(BACKEND.received()).isEmpty();
     }
 
@@ -116,6 +142,18 @@ class GatewaySecurityTest extends GatewayTest {
                 .andExpect(header().stringValues("Access-Control-Allow-Origin", WEB_ORIGIN));
 
         assertThat(BACKEND.last().header("Origin")).isNull();
+    }
+
+    @Test
+    void answersThePreflightOfTheDeviceRoutes() throws Exception {
+        mvc.perform(options("/api/v1/homes/H1/devices/D1")
+                        .header("Origin", WEB_ORIGIN)
+                        .header("Access-Control-Request-Method", "PUT")
+                        .header("Access-Control-Request-Headers", "Authorization,Content-Type"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Access-Control-Allow-Origin", WEB_ORIGIN));
+
+        assertThat(DEVICE_SERVICE.received()).isEmpty();
     }
 
     @Test
