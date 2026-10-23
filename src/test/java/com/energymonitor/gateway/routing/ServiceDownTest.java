@@ -24,6 +24,7 @@ class ServiceDownTest {
     @DynamicPropertySource
     static void services(DynamicPropertyRegistry registry) {
         registry.add("gateway.routes.security-service-url", () -> "http://127.0.0.1:9");
+        registry.add("gateway.routes.device-service-url", () -> "http://127.0.0.1:9");
         registry.add("gateway.routes.backend-url", () -> "http://127.0.0.1:9");
         registry.add("security.jwt.public-key-path", TestTokens::publicKeyFile);
     }
@@ -36,5 +37,13 @@ class ServiceDownTest {
                 .andExpect(jsonPath("$.status").value(503))
                 .andExpect(jsonPath("$.path").value("/api/v1/homes"))
                 .andExpect(jsonPath("$.message").value("The service is not available. Try again later."));
+    }
+
+    @Test
+    void answersServiceUnavailableWhenTheDeviceServiceIsDown() throws Exception {
+        mvc.perform(get("/api/v1/homes/H1/devices")
+                        .header("Authorization", "Bearer " + TestTokens.valid("use0000001")))
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(jsonPath("$.path").value("/api/v1/homes/H1/devices"));
     }
 }
