@@ -19,6 +19,13 @@ Before forwarding, it:
 - **validates the access token** (RS256 signature of the security service, issuer, expiry) on every
   route except the public account endpoints. A missing or invalid token is answered 401 here; a
   valid one is forwarded as is, and the services check it again and decide the permissions;
+- **reads the web app's token from its HttpOnly cookie** (`AccessTokenCookieFilter`): a request
+  without `Authorization` but with the `em_access` cookie and `X-Requested-With: XMLHttpRequest`
+  is validated and forwarded with `Authorization: Bearer <cookie>`. Without that header (which a
+  forged cross-site form or image cannot send) the cookie is ignored; the public account endpoints
+  are left alone, so an expired cookie never blocks the refresh that renews it. The mobile app
+  keeps sending the header itself. The cookies are set by the security service (its README,
+  "Sessions");
 - **limits the public account endpoints** (sign in, registration, Google, refresh, recovery,
   verification): 20 `POST`s per client address and path per minute, then 429 with `Retry-After`;
 - **answers 503** when a service refuses the connection and **504** when it takes longer than 30 s.
