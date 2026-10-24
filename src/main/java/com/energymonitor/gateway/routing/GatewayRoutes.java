@@ -18,8 +18,8 @@ import org.springframework.web.servlet.function.ServerResponse;
  * The routes of the API, checked in order:
  *
  * <ol>
- *   <li>{@code /api/v1/auth/**}, {@code /api/v1/admin/users/**} and {@code /api/v1/admin/roles/**}
- *       go to the security service;</li>
+ *   <li>{@code /api/v1/auth/**}, {@code /api/v1/admin/users/**}, {@code /api/v1/admin/roles/**}
+ *       and {@code /api/v1/support/**} go to the security service;</li>
  *   <li>{@code /api/v1/homes/{homeId}/devices/**} and {@code /api/v1/appliance-types/**} go to the
  *       device service;</li>
  *   <li>every other {@code /api/v1/**} goes to energy-monitor-backend.</li>
@@ -39,7 +39,8 @@ public class GatewayRoutes {
     static final String[] SECURITY_SERVICE_PATHS = {
             "/api/v1/auth/**",
             "/api/v1/admin/users/**",
-            "/api/v1/admin/roles/**"
+            "/api/v1/admin/roles/**",
+            "/api/v1/support/**"
     };
 
     /** The paths the device service serves. */

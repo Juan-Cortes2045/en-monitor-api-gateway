@@ -37,6 +37,16 @@ class GatewayRoutesTest extends GatewayTest {
     }
 
     @Test
+    void sendsTheSupportContactsToTheSecurityServiceWithoutAToken() throws Exception {
+        mvc.perform(get("/api/v1/support/contacts"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.service").value("security"));
+
+        assertThat(SECURITY_SERVICE.last().path()).isEqualTo("/api/v1/support/contacts");
+        assertThat(BACKEND.received()).isEmpty();
+    }
+
+    @Test
     void sendsTheRbacAdministrationToTheSecurityService() throws Exception {
         mvc.perform(get("/api/v1/admin/users").queryParam("page", "1")
                         .header("Authorization", bearer("adm0000001")))
