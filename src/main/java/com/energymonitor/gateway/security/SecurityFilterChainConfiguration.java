@@ -55,7 +55,9 @@ public class SecurityFilterChainConfiguration {
             "/api/v1/auth/password/forgot",
             "/api/v1/auth/password/reset",
             "/api/v1/auth/email/verify",
-            "/api/v1/auth/email/verification/resend"
+            "/api/v1/auth/email/verification/resend",
+            // Who the public support page can write to (the active administrators).
+            "/api/v1/support/contacts"
     };
 
     private static final String[] INFRASTRUCTURE_ENDPOINTS = {

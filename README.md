@@ -6,7 +6,7 @@ that owns it:
 
 | Path | Service |
 |---|---|
-| `/api/v1/auth/**`, `/api/v1/admin/users/**`, `/api/v1/admin/roles/**` | en-monitor-security-service (`:8082`) |
+| `/api/v1/auth/**`, `/api/v1/admin/users/**`, `/api/v1/admin/roles/**`, `/api/v1/support/**` | en-monitor-security-service (`:8082`) |
 | `/api/v1/homes/{homeId}/devices/**`, `/api/v1/appliance-types/**` | en-monitor-device-service (`:8084`) |
 | any other `/api/v1/**` | energy-monitor-backend (`:8083`) |
 | `/internal/**` | never forwarded (401 without a token, 403 with one) |
@@ -17,7 +17,8 @@ Before forwarding, it:
 - **answers CORS** for the whole API, and drops the `Origin` header, so the services never add
   CORS headers of their own;
 - **validates the access token** (RS256 signature of the security service, issuer, expiry) on every
-  route except the public account endpoints. A missing or invalid token is answered 401 here; a
+  route except the public account endpoints and the support contacts (`GET /api/v1/support/contacts`,
+  read by the public support page). A missing or invalid token is answered 401 here; a
   valid one is forwarded as is, and the services check it again and decide the permissions;
 - **reads the web app's token from its HttpOnly cookie** (`AccessTokenCookieFilter`): a request
   without `Authorization` but with the `em_access` cookie and `X-Requested-With: XMLHttpRequest`
