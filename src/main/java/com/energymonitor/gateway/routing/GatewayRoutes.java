@@ -18,8 +18,10 @@ import org.springframework.web.servlet.function.ServerResponse;
  * The routes of the API, checked in order:
  *
  * <ol>
- *   <li>{@code /api/v1/auth/**}, {@code /api/v1/admin/users/**} and {@code /api/v1/admin/roles/**}
- *       go to the security service;</li>
+ *   <li>{@code /api/v1/auth/**}, {@code /api/v1/admin/users/**}, {@code /api/v1/admin/roles/**}
+ *       and {@code /api/v1/support/**} go to the security service;</li>
+ *   <li>{@code /api/v1/homes/{homeId}/devices/**} and {@code /api/v1/appliance-types/**} go to the
+ *       device service;</li>
  *   <li>every other {@code /api/v1/**} goes to energy-monitor-backend.</li>
  * </ol>
  *
@@ -37,7 +39,14 @@ public class GatewayRoutes {
     static final String[] SECURITY_SERVICE_PATHS = {
             "/api/v1/auth/**",
             "/api/v1/admin/users/**",
-            "/api/v1/admin/roles/**"
+            "/api/v1/admin/roles/**",
+            "/api/v1/support/**"
+    };
+
+    /** The paths the device service serves. */
+    static final String[] DEVICE_SERVICE_PATHS = {
+            "/api/v1/homes/*/devices/**",
+            "/api/v1/appliance-types/**"
     };
 
     @Bean
@@ -47,12 +56,17 @@ public class GatewayRoutes {
                 .before(uri(properties.securityServiceUrl()))
                 .before(removeRequestHeader(HttpHeaders.ORIGIN))
                 .build();
+        RouterFunction<ServerResponse> deviceService = route("device-service")
+                .route(anyOf(DEVICE_SERVICE_PATHS), http())
+                .before(uri(properties.deviceServiceUrl()))
+                .before(removeRequestHeader(HttpHeaders.ORIGIN))
+                .build();
         RouterFunction<ServerResponse> backend = route("backend")
                 .route(path("/api/v1/**"), http())
                 .before(uri(properties.backendUrl()))
                 .before(removeRequestHeader(HttpHeaders.ORIGIN))
                 .build();
-        return securityService.and(backend);
+        return securityService.and(deviceService).and(backend);
     }
 
     private static RequestPredicate anyOf(String... patterns) {

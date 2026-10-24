@@ -5,6 +5,7 @@ import com.energymonitor.gateway.ratelimit.FixedWindowRateLimiter;
 import com.energymonitor.gateway.ratelimit.RateLimitProperties;
 import com.github.benmanes.caffeine.cache.Ticker;
 import java.time.Clock;
+import java.util.Arrays;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -13,7 +14,11 @@ import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
+import org.springframework.security.web.util.matcher.OrRequestMatcher;
+import org.springframework.security.web.util.matcher.RequestMatcher;
 import org.springframework.web.filter.CorsFilter;
 import tools.jackson.databind.ObjectMapper;
 
@@ -31,8 +36,11 @@ import tools.jackson.databind.ObjectMapper;
  *       forwarded as is, and the service checks it again and decides the permissions.</li>
  * </ul>
  *
- * <p>Stateless, no session and no CSRF: the API authenticates with a bearer token, never with a
- * cookie, so there is no ambient credential a forged request could ride on.
+ * <p>Stateless and no session. The API authenticates with a bearer token: the mobile app sends
+ * the header, the web app's comes from its HttpOnly cookie ({@link AccessTokenCookieFilter}).
+ * That cookie is ambient, so it is {@code SameSite=Strict} and only used together with
+ * {@code X-Requested-With: XMLHttpRequest}, a header a forged cross-site request cannot carry;
+ * that is the CSRF protection, instead of Spring's token-based one.
  */
 @Configuration(proxyBeanMethods = false)
 @EnableConfigurationProperties(RateLimitProperties.class)
@@ -47,7 +55,9 @@ public class SecurityFilterChainConfiguration {
             "/api/v1/auth/password/forgot",
             "/api/v1/auth/password/reset",
             "/api/v1/auth/email/verify",
-            "/api/v1/auth/email/verification/resend"
+            "/api/v1/auth/email/verification/resend",
+            // Who the public support page can write to (the active administrators).
+            "/api/v1/support/contacts"
     };
 
     private static final String[] INFRASTRUCTURE_ENDPOINTS = {
@@ -68,6 +78,10 @@ public class SecurityFilterChainConfiguration {
                 new FixedWindowRateLimiter(rateLimit.requests(), rateLimit.window(),
                         Ticker.systemTicker()),
                 rateLimit.paths(), objectMapper, clock);
+        AccessTokenCookieFilter cookieFilter = new AccessTokenCookieFilter(new OrRequestMatcher(
+                Arrays.stream(PUBLIC_ENDPOINTS)
+                        .map(path -> (RequestMatcher) PathPatternRequestMatcher.withDefaults().matcher(path))
+                        .toList()));
 
         http
                 .csrf(AbstractHttpConfigurer::disable)
@@ -90,7 +104,8 @@ public class SecurityFilterChainConfiguration {
                 .exceptionHandling(exceptions -> exceptions
                         .authenticationEntryPoint(entryPoint)
                         .accessDeniedHandler(accessDeniedHandler))
-                .addFilterAfter(rateLimitFilter, CorsFilter.class);
+                .addFilterAfter(rateLimitFilter, CorsFilter.class)
+                .addFilterBefore(cookieFilter, BearerTokenAuthenticationFilter.class);
         return http.build();
     }
 }

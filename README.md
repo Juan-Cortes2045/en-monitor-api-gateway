@@ -6,7 +6,8 @@ that owns it:
 
 | Path | Service |
 |---|---|
-| `/api/v1/auth/**`, `/api/v1/admin/users/**`, `/api/v1/admin/roles/**` | en-monitor-security-service (`:8082`) |
+| `/api/v1/auth/**`, `/api/v1/admin/users/**`, `/api/v1/admin/roles/**`, `/api/v1/support/**` | en-monitor-security-service (`:8082`) |
+| `/api/v1/homes/{homeId}/devices/**`, `/api/v1/appliance-types/**` | en-monitor-device-service (`:8084`) |
 | any other `/api/v1/**` | energy-monitor-backend (`:8083`) |
 | `/internal/**` | never forwarded (401 without a token, 403 with one) |
 | anything else | 404 |
@@ -16,14 +17,27 @@ Before forwarding, it:
 - **answers CORS** for the whole API, and drops the `Origin` header, so the services never add
   CORS headers of their own;
 - **validates the access token** (RS256 signature of the security service, issuer, expiry) on every
-  route except the public account endpoints. A missing or invalid token is answered 401 here; a
+  route except the public account endpoints and the support contacts (`GET /api/v1/support/contacts`,
+  read by the public support page). A missing or invalid token is answered 401 here; a
   valid one is forwarded as is, and the services check it again and decide the permissions;
+- **reads the web app's token from its HttpOnly cookie** (`AccessTokenCookieFilter`): a request
+  without `Authorization` but with the `em_access` cookie and `X-Requested-With: XMLHttpRequest`
+  is validated and forwarded with `Authorization: Bearer <cookie>`. Without that header (which a
+  forged cross-site form or image cannot send) the cookie is ignored; the public account endpoints
+  are left alone, so an expired cookie never blocks the refresh that renews it. The mobile app
+  keeps sending the header itself. The cookies are set by the security service (its README,
+  "Sessions");
 - **limits the public account endpoints** (sign in, registration, Google, refresh, recovery,
   verification): 20 `POST`s per client address and path per minute, then 429 with `Retry-After`;
 - **answers 503** when a service refuses the connection and **504** when it takes longer than 30 s.
 
 Every answer it produces itself has the same JSON shape as the services' errors
 (`timestamp`, `status`, `error`, `message`, `path`).
+
+The device routes are checked before the backend's catch-all, so only the devices of a home move:
+`/api/v1/homes/{homeId}`, its members, thresholds and readings stay in the backend. The broker
+authentication (`/internal/mqtt/**`) is Mosquitto's call to the device service over the private
+network and never passes through here.
 
 The design is in [`docs/Architecture.md`](docs/Architecture.md).
 
@@ -47,12 +61,13 @@ pair" in its README).
 It answers on `http://localhost:8080`. Health: `/actuator/health`. It starts without the services
 behind it; their routes answer 503 until they are up.
 
-The three services on one machine:
+The services on one machine:
 
 | Service | Port | Started with |
 |---|---|---|
 | api-gateway | 8080 | `./mvnw spring-boot:run` here |
 | en-monitor-security-service | 8082 | `./mvnw spring-boot:run` in its repository |
+| en-monitor-device-service | 8084 | `./mvnw spring-boot:run` in its repository |
 | energy-monitor-backend | 8083 | `./mvnw spring-boot:run` in its repository |
 
 The web app keeps `VITE_API_BASE_URL=http://localhost:8080`.
@@ -72,10 +87,10 @@ a machine of the LAN could otherwise pass as `127.0.0.1`. The gateway appends th
 docker build -t energy-monitor-gateway .
 ```
 
-The infra repository builds the image and runs it in front of the other two services
+The infra repository builds the image and runs it in front of the other services
 (`infra/docker-compose.yml`, `infra/docker-compose.prod.yml`). There it publishes no port: the
 web container's nginx forwards `/api/` to `gateway:8080`, the services are reached as
-`security:8082` and `backend:8083`, and it receives only `public.pem`. Its container health is
+`security:8082`, `device:8084` and `backend:8083`, and it receives only `public.pem`. Its container health is
 `/actuator/health`.
 
 `.github/workflows/ci-cd.yml` runs `./mvnw test` on every pull request and push to `dev` and
@@ -88,7 +103,7 @@ with `infra/deploy/deploy.sh gateway`.
 ./mvnw test
 ```
 
-They need nothing running: two fake services on free local ports stand in for the real ones, and
+They need nothing running: three fake services on free local ports stand in for the real ones, and
 the key pair is generated for the run.
 
 ## Configuration
@@ -100,6 +115,7 @@ the key pair is generated for the run.
 | `SECURITY_CORS_ALLOWED_ORIGINS` | empty (none) | browser origins allowed, comma separated |
 | `SECURITY_CORS_ALLOWED_ORIGIN_PATTERNS` | empty | origin patterns, such as `https://*.example.com` |
 | `SECURITY_SERVICE_URL` | `http://localhost:8082` | en-monitor-security-service |
+| `DEVICE_SERVICE_URL` | `http://localhost:8084` | en-monitor-device-service |
 | `BACKEND_URL` | `http://localhost:8083` | energy-monitor-backend |
 | `GATEWAY_CONNECT_TIMEOUT` | `2s` | connection to a service |
 | `GATEWAY_READ_TIMEOUT` | `30s` | answer of a service |
