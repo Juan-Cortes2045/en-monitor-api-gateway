@@ -22,6 +22,8 @@ client ──► nginx (HTTPS) ──► gateway :8080
                                │ 4. route: Origin dropped, X-Forwarded-For appended
                                ├──► en-monitor-security-service :8082   /api/v1/auth/**, /api/v1/admin/users|roles/**
                                ├──► en-monitor-device-service :8084     /api/v1/homes/*/devices/**, /api/v1/appliance-types/**
+                               ├──► en-monitor-measurement-service :8085 /api/v1/measurements/**, /api/v1/consumption-levels/**,
+                               │                                         /api/v1/homes/*/consumption/**
                                └──► energy-monitor-backend :8083        any other /api/v1/**
 ```
 
@@ -41,7 +43,7 @@ client ──► nginx (HTTPS) ──► gateway :8080
   network, with their own token.
 - **The rate limit is in memory.** It is per instance and starts again on restart; enough for one
   instance. Several instances would need a shared store (Redis).
-- **Routes by path prefix, most specific first.** The device routes are matched before the
+- **Routes by path prefix, most specific first.** The device and measurement routes are matched before the
   backend's `/api/v1/**`, so moving a module out of the backend only adds a route here; the paths
   the clients call do not change.
 - **Apache HttpClient 5** forwards the requests: the JDK client fails on a `DELETE` without a body.
@@ -54,3 +56,6 @@ with its own CI/CD workflow.
 
 The device service migration (see en-monitor-device-service) added the route to the devices of a
 home and the appliance catalogue; the clients call the same paths as before.
+
+The measurement service migration (see en-monitor-measurement-service) added the route to the
+readings, the consumption of a home and the consumption levels, with the same paths as before.

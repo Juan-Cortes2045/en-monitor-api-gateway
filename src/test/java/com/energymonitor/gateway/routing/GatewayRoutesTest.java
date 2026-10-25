@@ -108,6 +108,40 @@ class GatewayRoutesTest extends GatewayTest {
     }
 
     @Test
+    void sendsTheReadingsAndTheConsumptionToTheMeasurementService() throws Exception {
+        String authorization = bearer("use0000001");
+
+        mvc.perform(get("/api/v1/measurements").queryParam("deviceId", "D1")
+                        .header("Authorization", authorization).header("Origin", WEB_ORIGIN))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.service").value("measurement"));
+        mvc.perform(get("/api/v1/measurements/latest").queryParam("deviceId", "D1")
+                        .header("Authorization", authorization))
+                .andExpect(status().isOk());
+        mvc.perform(get("/api/v1/measurements/statistics").queryParam("deviceId", "D1")
+                        .header("Authorization", authorization))
+                .andExpect(status().isOk());
+        mvc.perform(get("/api/v1/consumption-levels").header("Authorization", authorization))
+                .andExpect(status().isOk());
+        mvc.perform(get("/api/v1/homes/H1/consumption/summary").queryParam("zone", "America/Bogota")
+                        .header("Authorization", authorization))
+                .andExpect(status().isOk());
+        mvc.perform(get("/api/v1/homes/H1/consumption/history").queryParam("period", "week")
+                        .header("Authorization", authorization))
+                .andExpect(status().isOk());
+
+        assertThat(MEASUREMENT_SERVICE.received()).extracting(FakeService.Received::path)
+                .containsExactly("/api/v1/measurements?deviceId=D1", "/api/v1/measurements/latest?deviceId=D1",
+                        "/api/v1/measurements/statistics?deviceId=D1", "/api/v1/consumption-levels",
+                        "/api/v1/homes/H1/consumption/summary?zone=America%2FBogota",
+                        "/api/v1/homes/H1/consumption/history?period=week");
+        assertThat(MEASUREMENT_SERVICE.received().getFirst().header("Authorization")).isEqualTo(authorization);
+        assertThat(MEASUREMENT_SERVICE.received().getFirst().header("Origin")).isNull();
+        assertThat(BACKEND.received()).isEmpty();
+        assertThat(DEVICE_SERVICE.received()).isEmpty();
+    }
+
+    @Test
     void keepsTheRestOfAHomeInTheBackend() throws Exception {
         String authorization = bearer("use0000001");
 
@@ -117,13 +151,17 @@ class GatewayRoutesTest extends GatewayTest {
                 .andExpect(status().isOk());
         mvc.perform(get("/api/v1/homes/H1/devices-report").header("Authorization", authorization))
                 .andExpect(status().isOk());
+        mvc.perform(get("/api/v1/homes/H1/thresholds").header("Authorization", authorization))
+                .andExpect(status().isOk());
         mvc.perform(post("/api/v1/notifications/push/devices").header("Authorization", authorization))
                 .andExpect(status().isOk());
 
         assertThat(BACKEND.received()).extracting(FakeService.Received::path)
                 .containsExactly("/api/v1/homes/H1", "/api/v1/homes/H1/members",
-                        "/api/v1/homes/H1/devices-report", "/api/v1/notifications/push/devices");
+                        "/api/v1/homes/H1/devices-report", "/api/v1/homes/H1/thresholds",
+                        "/api/v1/notifications/push/devices");
         assertThat(DEVICE_SERVICE.received()).isEmpty();
+        assertThat(MEASUREMENT_SERVICE.received()).isEmpty();
     }
 
     @Test
