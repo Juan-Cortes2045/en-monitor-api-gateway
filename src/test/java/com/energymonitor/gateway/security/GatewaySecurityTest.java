@@ -136,7 +136,7 @@ class GatewaySecurityTest extends GatewayTest {
 
     @Test
     void answersCorsOnceAndHidesTheOriginFromTheService() throws Exception {
-        mvc.perform(get("/api/v1/homes").header("Origin", WEB_ORIGIN)
+        mvc.perform(get("/api/v1/alerts").header("Origin", WEB_ORIGIN)
                         .header("Authorization", bearer("use0000001")))
                 .andExpect(status().isOk())
                 .andExpect(header().stringValues("Access-Control-Allow-Origin", WEB_ORIGIN));
