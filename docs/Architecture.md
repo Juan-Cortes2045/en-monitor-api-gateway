@@ -25,6 +25,7 @@ client ──► nginx (HTTPS) ──► gateway :8080
                                ├──► en-monitor-measurement-service :8085 /api/v1/measurements/**, /api/v1/consumption-levels/**,
                                │                                         /api/v1/homes/*/consumption/**
                                ├──► en-monitor-home-service :8086       the rest of /api/v1/homes/**, /api/v1/home-types/**
+                               ├──► en-monitor-notification-service :8087 /api/v1/notifications/**, /api/v1/admin/notifications/**
                                └──► energy-monitor-backend :8083        any other /api/v1/**
 ```
 
@@ -65,3 +66,9 @@ readings, the consumption of a home and the consumption levels, with the same pa
 The home service migration (see en-monitor-home-service) added the route to the homes, their
 members and thresholds, and the home types, with the same paths as before. The home service must
 be running before a gateway with this route is deployed: until then those paths answer 503.
+
+The notification service migration (see en-monitor-notification-service) added the route to a
+user's notification channels and the administrator notifications, with the same paths as before.
+`/api/v1/admin/notifications/**` is not one of the security service's admin paths, so it reaches
+this route. The notification service must be running before a gateway with this route is
+deployed: until then those paths answer 503.
