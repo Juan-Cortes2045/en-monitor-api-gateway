@@ -214,18 +214,83 @@ class GatewayRoutesTest extends GatewayTest {
         mvc.perform(get("/api/v1/alerts").header("Authorization", authorization))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.service").value("backend"));
-        mvc.perform(get("/api/v1/admin/notifications").header("Authorization", authorization))
+        mvc.perform(get("/api/v1/recommendations").header("Authorization", authorization))
                 .andExpect(status().isOk());
-        mvc.perform(post("/api/v1/notifications/push/devices").header("Authorization", authorization))
+        mvc.perform(put("/api/v1/alerts/A1/resolve").header("Authorization", authorization))
                 .andExpect(status().isOk());
 
         assertThat(BACKEND.received()).extracting(FakeService.Received::path)
-                .containsExactly("/api/v1/alerts", "/api/v1/admin/notifications",
-                        "/api/v1/notifications/push/devices");
+                .containsExactly("/api/v1/alerts", "/api/v1/recommendations",
+                        "/api/v1/alerts/A1/resolve");
         assertThat(BACKEND.last().header("Authorization")).isEqualTo(authorization);
         assertThat(SECURITY_SERVICE.received()).isEmpty();
         assertThat(DEVICE_SERVICE.received()).isEmpty();
         assertThat(HOME_SERVICE.received()).isEmpty();
+        assertThat(NOTIFICATION_SERVICE.received()).isEmpty();
+    }
+
+    @Test
+    void sendsTheNotificationChannelsToTheNotificationService() throws Exception {
+        String authorization = bearer("use0000001");
+
+        mvc.perform(get("/api/v1/notifications/preferences").header("Authorization", authorization)
+                        .header("Origin", WEB_ORIGIN))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.service").value("notification"));
+        mvc.perform(put("/api/v1/notifications/preferences").header("Authorization", authorization))
+                .andExpect(status().isOk());
+        mvc.perform(get("/api/v1/notifications/push/public-key").header("Authorization", authorization))
+                .andExpect(status().isOk());
+        mvc.perform(post("/api/v1/notifications/push/subscriptions").header("Authorization", authorization))
+                .andExpect(status().isOk());
+        mvc.perform(post("/api/v1/notifications/push/subscriptions/remove").header("Authorization", authorization))
+                .andExpect(status().isOk());
+        mvc.perform(post("/api/v1/notifications/push/devices").header("Authorization", authorization))
+                .andExpect(status().isOk());
+        mvc.perform(post("/api/v1/notifications/push/devices/remove").header("Authorization", authorization))
+                .andExpect(status().isOk());
+        mvc.perform(get("/api/v1/notifications/push/devices/available").header("Authorization", authorization))
+                .andExpect(status().isOk());
+
+        assertThat(NOTIFICATION_SERVICE.received()).extracting(FakeService.Received::path)
+                .containsExactly("/api/v1/notifications/preferences", "/api/v1/notifications/preferences",
+                        "/api/v1/notifications/push/public-key", "/api/v1/notifications/push/subscriptions",
+                        "/api/v1/notifications/push/subscriptions/remove", "/api/v1/notifications/push/devices",
+                        "/api/v1/notifications/push/devices/remove",
+                        "/api/v1/notifications/push/devices/available");
+        assertThat(NOTIFICATION_SERVICE.received().getFirst().header("Authorization")).isEqualTo(authorization);
+        assertThat(NOTIFICATION_SERVICE.received().getFirst().header("Origin")).isNull();
+        assertThat(BACKEND.received()).isEmpty();
+    }
+
+    @Test
+    void sendsTheAdministratorNotificationsToTheNotificationService() throws Exception {
+        String authorization = bearer("use0000001");
+
+        mvc.perform(get("/api/v1/admin/notifications").header("Authorization", authorization))
+                .andExpect(status().isOk());
+        mvc.perform(put("/api/v1/admin/notifications/N1/read").header("Authorization", authorization))
+                .andExpect(status().isOk());
+        mvc.perform(delete("/api/v1/admin/notifications/N1").header("Authorization", authorization))
+                .andExpect(status().isOk());
+
+        assertThat(NOTIFICATION_SERVICE.received()).extracting(FakeService.Received::path)
+                .containsExactly("/api/v1/admin/notifications", "/api/v1/admin/notifications/N1/read",
+                        "/api/v1/admin/notifications/N1");
+        assertThat(SECURITY_SERVICE.received()).isEmpty();
+        assertThat(BACKEND.received()).isEmpty();
+    }
+
+    @Test
+    void tellsTheNotificationServiceWhoCalled() throws Exception {
+        mvc.perform(get("/api/v1/notifications/preferences").header("Authorization", bearer("use0000001"))
+                        .with(request -> {
+                            request.setRemoteAddr("203.0.113.11");
+                            return request;
+                        }))
+                .andExpect(status().isOk());
+
+        assertThat(NOTIFICATION_SERVICE.last().header("X-Forwarded-For")).isEqualTo("203.0.113.11");
     }
 
     @Test
