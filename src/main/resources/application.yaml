@@ -23,8 +23,8 @@ spring:
 
 server:
   # 8080 is the address the web and mobile clients already use. energy-monitor-backend moves to
-  # 8083, the security service stays on 8082, the device service is on 8084 and the measurement
-  # service on 8085.
+  # 8083, the security service stays on 8082, the device service is on 8084, the measurement
+  # service on 8085 and the home service on 8086.
   port: ${SERVER_PORT:8080}
   # Behind nginx the connection comes from the proxy; the container takes the caller's address
   # from X-Forwarded-For only when the proxy is a trusted one. The rate limit counts on that
@@ -42,6 +42,7 @@ gateway:
     security-service-url: ${SECURITY_SERVICE_URL:http://localhost:8082}
     device-service-url: ${DEVICE_SERVICE_URL:http://localhost:8084}
     measurement-service-url: ${MEASUREMENT_SERVICE_URL:http://localhost:8085}
+    home-service-url: ${HOME_SERVICE_URL:http://localhost:8086}
     backend-url: ${BACKEND_URL:http://localhost:8083}
   # POSTs per client address and path to the public account endpoints (sign in, registration,
   # recovery, verification). The security service keeps its own limit on recovery codes.
