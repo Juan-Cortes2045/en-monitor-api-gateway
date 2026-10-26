@@ -27,6 +27,8 @@ import org.springframework.web.servlet.function.ServerResponse;
  *   <li>the rest of {@code /api/v1/homes/**}, and {@code /api/v1/home-types/**}, go to the home
  *       service: after the two above, so the devices and the consumption of a home do not end
  *       up there;</li>
+ *   <li>{@code /api/v1/notifications/**} and {@code /api/v1/admin/notifications/**} go to the
+ *       notification service;</li>
  *   <li>every other {@code /api/v1/**} goes to energy-monitor-backend.</li>
  * </ol>
  *
@@ -67,6 +69,12 @@ public class GatewayRoutes {
             "/api/v1/home-types/**"
     };
 
+    /** The paths the notification service serves: a user's channels and the administrator notifications. */
+    static final String[] NOTIFICATION_SERVICE_PATHS = {
+            "/api/v1/notifications/**",
+            "/api/v1/admin/notifications/**"
+    };
+
     @Bean
     public RouterFunction<ServerResponse> apiRoutes(GatewayRoutesProperties properties) {
         RouterFunction<ServerResponse> securityService = route("security-service")
@@ -89,13 +97,19 @@ public class GatewayRoutes {
                 .before(uri(properties.homeServiceUrl()))
                 .before(removeRequestHeader(HttpHeaders.ORIGIN))
                 .build();
+        RouterFunction<ServerResponse> notificationService = route("notification-service")
+                .route(anyOf(NOTIFICATION_SERVICE_PATHS), http())
+                .before(uri(properties.notificationServiceUrl()))
+                .before(removeRequestHeader(HttpHeaders.ORIGIN))
+                .build();
         RouterFunction<ServerResponse> backend = route("backend")
                 .route(path("/api/v1/**"), http())
                 .before(uri(properties.backendUrl()))
                 .before(removeRequestHeader(HttpHeaders.ORIGIN))
                 .build();
         // The order is the precedence: /homes/*/devices and /homes/*/consumption before /homes/**.
-        return securityService.and(deviceService).and(measurementService).and(homeService).and(backend);
+        return securityService.and(deviceService).and(measurementService).and(homeService)
+                .and(notificationService).and(backend);
     }
 
     private static RequestPredicate anyOf(String... patterns) {

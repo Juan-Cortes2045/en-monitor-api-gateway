@@ -13,6 +13,8 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
  *                              consumption levels
  * @param homeServiceUrl     en-monitor-home-service: homes, their members and thresholds, and
  *                           the home types
+ * @param notificationServiceUrl en-monitor-notification-service: a user's notification channels
+ *                               and the administrator notifications
  * @param backendUrl         energy-monitor-backend: everything else under {@code /api/v1}
  */
 @ConfigurationProperties(prefix = "gateway.routes")
@@ -21,5 +23,6 @@ public record GatewayRoutesProperties(
         @DefaultValue("http://localhost:8084") URI deviceServiceUrl,
         @DefaultValue("http://localhost:8085") URI measurementServiceUrl,
         @DefaultValue("http://localhost:8086") URI homeServiceUrl,
+        @DefaultValue("http://localhost:8087") URI notificationServiceUrl,
         @DefaultValue("http://localhost:8083") URI backendUrl) {
 }
