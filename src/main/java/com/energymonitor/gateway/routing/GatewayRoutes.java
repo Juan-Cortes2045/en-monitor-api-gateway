@@ -30,6 +30,7 @@ import org.springframework.web.servlet.function.ServerResponse;
  *   <li>{@code /api/v1/notifications/**} and {@code /api/v1/admin/notifications/**} go to the
  *       notification service;</li>
  *   <li>{@code /api/v1/alerts/**} goes to the alert service;</li>
+ *   <li>{@code /api/v1/recommendations/**} goes to the recommendation service;</li>
  *   <li>every other {@code /api/v1/**} goes to energy-monitor-backend.</li>
  * </ol>
  *
@@ -81,6 +82,11 @@ public class GatewayRoutes {
             "/api/v1/alerts/**"
     };
 
+    /** The paths the recommendation service serves: the recommendations of a home. */
+    static final String[] RECOMMENDATION_SERVICE_PATHS = {
+            "/api/v1/recommendations/**"
+    };
+
     @Bean
     public RouterFunction<ServerResponse> apiRoutes(GatewayRoutesProperties properties) {
         RouterFunction<ServerResponse> securityService = route("security-service")
@@ -113,6 +119,11 @@ public class GatewayRoutes {
                 .before(uri(properties.alertServiceUrl()))
                 .before(removeRequestHeader(HttpHeaders.ORIGIN))
                 .build();
+        RouterFunction<ServerResponse> recommendationService = route("recommendation-service")
+                .route(anyOf(RECOMMENDATION_SERVICE_PATHS), http())
+                .before(uri(properties.recommendationServiceUrl()))
+                .before(removeRequestHeader(HttpHeaders.ORIGIN))
+                .build();
         RouterFunction<ServerResponse> backend = route("backend")
                 .route(path("/api/v1/**"), http())
                 .before(uri(properties.backendUrl()))
@@ -120,7 +131,7 @@ public class GatewayRoutes {
                 .build();
         // The order is the precedence: /homes/*/devices and /homes/*/consumption before /homes/**.
         return securityService.and(deviceService).and(measurementService).and(homeService)
-                .and(notificationService).and(alertService).and(backend);
+                .and(notificationService).and(alertService).and(recommendationService).and(backend);
     }
 
     private static RequestPredicate anyOf(String... patterns) {

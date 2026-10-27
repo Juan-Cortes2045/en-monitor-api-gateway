@@ -211,23 +211,47 @@ class GatewayRoutesTest extends GatewayTest {
     void sendsEverythingElseToTheBackendWithTheToken() throws Exception {
         String authorization = bearer("use0000001");
 
-        mvc.perform(get("/api/v1/recommendations/R1").header("Authorization", authorization))
+        mvc.perform(get("/api/v1/other/R1").header("Authorization", authorization))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.service").value("backend"));
-        mvc.perform(get("/api/v1/recommendations").header("Authorization", authorization))
+        mvc.perform(get("/api/v1/other").header("Authorization", authorization))
                 .andExpect(status().isOk());
-        mvc.perform(put("/api/v1/recommendations/R1/read").header("Authorization", authorization))
+        mvc.perform(put("/api/v1/other/R1/read").header("Authorization", authorization))
                 .andExpect(status().isOk());
 
         assertThat(BACKEND.received()).extracting(FakeService.Received::path)
-                .containsExactly("/api/v1/recommendations/R1", "/api/v1/recommendations",
-                        "/api/v1/recommendations/R1/read");
+                .containsExactly("/api/v1/other/R1", "/api/v1/other",
+                        "/api/v1/other/R1/read");
         assertThat(BACKEND.last().header("Authorization")).isEqualTo(authorization);
         assertThat(SECURITY_SERVICE.received()).isEmpty();
         assertThat(DEVICE_SERVICE.received()).isEmpty();
         assertThat(HOME_SERVICE.received()).isEmpty();
         assertThat(NOTIFICATION_SERVICE.received()).isEmpty();
         assertThat(ALERT_SERVICE.received()).isEmpty();
+        assertThat(RECOMMENDATION_SERVICE.received()).isEmpty();
+    }
+
+    @Test
+    void sendsTheRecommendationsToTheRecommendationService() throws Exception {
+        String authorization = bearer("use0000001");
+
+        mvc.perform(get("/api/v1/recommendations").param("homeId", "H1").header("Authorization", authorization)
+                        .header("Origin", WEB_ORIGIN))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.service").value("recommendation"));
+        mvc.perform(put("/api/v1/recommendations/R1/read").header("Authorization", authorization))
+                .andExpect(status().isOk());
+        mvc.perform(delete("/api/v1/recommendations/R1").header("Authorization", authorization))
+                .andExpect(status().isOk());
+        mvc.perform(delete("/api/v1/recommendations").param("homeId", "H1").header("Authorization", authorization))
+                .andExpect(status().isOk());
+
+        assertThat(RECOMMENDATION_SERVICE.received()).extracting(FakeService.Received::path)
+                .containsExactly("/api/v1/recommendations?homeId=H1", "/api/v1/recommendations/R1/read",
+                        "/api/v1/recommendations/R1", "/api/v1/recommendations?homeId=H1");
+        assertThat(RECOMMENDATION_SERVICE.received().getFirst().header("Authorization")).isEqualTo(authorization);
+        assertThat(RECOMMENDATION_SERVICE.received().getFirst().header("Origin")).isNull();
+        assertThat(BACKEND.received()).isEmpty();
     }
 
     @Test
@@ -321,7 +345,7 @@ class GatewayRoutesTest extends GatewayTest {
 
     @Test
     void tellsTheServiceWhoCalled() throws Exception {
-        mvc.perform(get("/api/v1/recommendations").header("Authorization", bearer("use0000001"))
+        mvc.perform(get("/api/v1/other").header("Authorization", bearer("use0000001"))
                         .with(request -> {
                             request.setRemoteAddr("203.0.113.7");
                             return request;
