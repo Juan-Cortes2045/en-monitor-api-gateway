@@ -4,7 +4,7 @@ spring:
   application:
     name: api-gateway
 
-  # The client that forwards the requests. The read timeout is generous because some backend
+  # The client that forwards the requests. The read timeout is generous because some
   # requests (reports, consumption history) are slow on purpose; a service that does not even
   # accept the connection is answered 503 right away.
   http:
@@ -22,10 +22,9 @@ spring:
           trusted-proxies: ".*"
 
 server:
-  # 8080 is the address the web and mobile clients already use. energy-monitor-backend moves to
-  # 8083, the security service stays on 8082, the device service is on 8084, the measurement
-  # service on 8085, the home service on 8086, the notification service on 8087, the alert
-  # service on 8088 and the recommendation service on 8089.
+  # 8080 is the address the web and mobile clients already use. The security service is on 8082,
+  # the device service on 8084, the measurement service on 8085, the home service on 8086, the
+  # notification service on 8087, the alert service on 8088 and the recommendation service on 8089.
   port: ${SERVER_PORT:8080}
   # Behind nginx the connection comes from the proxy; the container takes the caller's address
   # from X-Forwarded-For only when the proxy is a trusted one. The rate limit counts on that
@@ -47,7 +46,6 @@ gateway:
     notification-service-url: ${NOTIFICATION_SERVICE_URL:http://localhost:8087}
     alert-service-url: ${ALERT_SERVICE_URL:http://localhost:8088}
     recommendation-service-url: ${RECOMMENDATION_SERVICE_URL:http://localhost:8089}
-    backend-url: ${BACKEND_URL:http://localhost:8083}
   # POSTs per client address and path to the public account endpoints (sign in, registration,
   # recovery, verification). The security service keeps its own limit on recovery codes.
   rate-limit:

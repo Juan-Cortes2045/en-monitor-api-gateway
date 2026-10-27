@@ -30,8 +30,7 @@ import org.springframework.web.servlet.function.ServerResponse;
  *   <li>{@code /api/v1/notifications/**} and {@code /api/v1/admin/notifications/**} go to the
  *       notification service;</li>
  *   <li>{@code /api/v1/alerts/**} goes to the alert service;</li>
- *   <li>{@code /api/v1/recommendations/**} goes to the recommendation service;</li>
- *   <li>every other {@code /api/v1/**} goes to energy-monitor-backend.</li>
+ *   <li>{@code /api/v1/recommendations/**} goes to the recommendation service.</li>
  * </ol>
  *
  * <p>Nothing else is forwarded: {@code /internal/**} (the calls between the services) is refused
@@ -124,14 +123,9 @@ public class GatewayRoutes {
                 .before(uri(properties.recommendationServiceUrl()))
                 .before(removeRequestHeader(HttpHeaders.ORIGIN))
                 .build();
-        RouterFunction<ServerResponse> backend = route("backend")
-                .route(path("/api/v1/**"), http())
-                .before(uri(properties.backendUrl()))
-                .before(removeRequestHeader(HttpHeaders.ORIGIN))
-                .build();
         // The order is the precedence: /homes/*/devices and /homes/*/consumption before /homes/**.
         return securityService.and(deviceService).and(measurementService).and(homeService)
-                .and(notificationService).and(alertService).and(recommendationService).and(backend);
+                .and(notificationService).and(alertService).and(recommendationService);
     }
 
     private static RequestPredicate anyOf(String... patterns) {

@@ -6,9 +6,9 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
 
 /**
- * The single entry point of the EnergyMonitor API: it routes each request to the security service
- * or to energy-monitor-backend, answers CORS, validates the access token and rate-limits the
- * public account endpoints before anything reaches them.
+ * The single entry point of the EnergyMonitor API: it routes each request to the service that owns
+ * it, answers CORS, validates the access token and rate-limits the public account endpoints before
+ * anything reaches them.
  */
 @SpringBootApplication
 public class ApiGatewayApplication {

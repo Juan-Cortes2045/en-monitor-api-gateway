@@ -30,7 +30,6 @@ class ServiceDownTest {
         registry.add("gateway.routes.notification-service-url", () -> "http://127.0.0.1:9");
         registry.add("gateway.routes.alert-service-url", () -> "http://127.0.0.1:9");
         registry.add("gateway.routes.recommendation-service-url", () -> "http://127.0.0.1:9");
-        registry.add("gateway.routes.backend-url", () -> "http://127.0.0.1:9");
         registry.add("security.jwt.public-key-path", TestTokens::publicKeyFile);
     }
 

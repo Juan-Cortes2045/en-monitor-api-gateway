@@ -33,7 +33,6 @@ class GatewayRoutesTest extends GatewayTest {
         assertThat(received.method()).isEqualTo("POST");
         assertThat(received.path()).isEqualTo("/api/v1/auth/login");
         assertThat(received.body()).isEqualTo("{\"email\":\"ana@example.com\",\"password\":\"x\"}");
-        assertThat(BACKEND.received()).isEmpty();
     }
 
     @Test
@@ -43,7 +42,6 @@ class GatewayRoutesTest extends GatewayTest {
                 .andExpect(jsonPath("$.service").value("security"));
 
         assertThat(SECURITY_SERVICE.last().path()).isEqualTo("/api/v1/support/contacts");
-        assertThat(BACKEND.received()).isEmpty();
     }
 
     @Test
@@ -60,7 +58,6 @@ class GatewayRoutesTest extends GatewayTest {
         assertThat(SECURITY_SERVICE.received()).extracting(FakeService.Received::path)
                 .containsExactly("/api/v1/admin/users?page=1", "/api/v1/admin/roles",
                         "/api/v1/admin/users/use0000001/roles/ADMIN");
-        assertThat(BACKEND.received()).isEmpty();
     }
 
     @Test
@@ -91,7 +88,6 @@ class GatewayRoutesTest extends GatewayTest {
         assertThat(DEVICE_SERVICE.received().get(1).body()).isEqualTo("{\"deviceCode\":\"ABC123\"}");
         assertThat(DEVICE_SERVICE.last().header("Authorization")).isEqualTo(authorization);
         assertThat(DEVICE_SERVICE.last().header("Origin")).isNull();
-        assertThat(BACKEND.received()).isEmpty();
         assertThat(SECURITY_SERVICE.received()).isEmpty();
     }
 
@@ -104,7 +100,6 @@ class GatewayRoutesTest extends GatewayTest {
 
         assertThat(DEVICE_SERVICE.last().path()).isEqualTo("/api/v1/appliance-types");
         assertThat(DEVICE_SERVICE.last().header("Origin")).isNull();
-        assertThat(BACKEND.received()).isEmpty();
     }
 
     @Test
@@ -137,7 +132,6 @@ class GatewayRoutesTest extends GatewayTest {
                         "/api/v1/homes/H1/consumption/history?period=week");
         assertThat(MEASUREMENT_SERVICE.received().getFirst().header("Authorization")).isEqualTo(authorization);
         assertThat(MEASUREMENT_SERVICE.received().getFirst().header("Origin")).isNull();
-        assertThat(BACKEND.received()).isEmpty();
         assertThat(DEVICE_SERVICE.received()).isEmpty();
     }
 
@@ -174,7 +168,6 @@ class GatewayRoutesTest extends GatewayTest {
                         "/api/v1/homes/H1/thresholds", "/api/v1/homes/H1/thresholds/defaults");
         assertThat(HOME_SERVICE.received().getFirst().header("Authorization")).isEqualTo(authorization);
         assertThat(HOME_SERVICE.received().getFirst().header("Origin")).isNull();
-        assertThat(BACKEND.received()).isEmpty();
         assertThat(DEVICE_SERVICE.received()).isEmpty();
         assertThat(MEASUREMENT_SERVICE.received()).isEmpty();
     }
@@ -190,7 +183,6 @@ class GatewayRoutesTest extends GatewayTest {
 
         assertThat(HOME_SERVICE.received()).extracting(FakeService.Received::path)
                 .containsExactly("/api/v1/home-types", "/api/v1/home-types/hous000001");
-        assertThat(BACKEND.received()).isEmpty();
     }
 
     @Test
@@ -208,21 +200,14 @@ class GatewayRoutesTest extends GatewayTest {
     }
 
     @Test
-    void sendsEverythingElseToTheBackendWithTheToken() throws Exception {
+    void answersNotFoundForAPathNoServiceServes() throws Exception {
         String authorization = bearer("use0000001");
 
         mvc.perform(get("/api/v1/other/R1").header("Authorization", authorization))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.service").value("backend"));
-        mvc.perform(get("/api/v1/other").header("Authorization", authorization))
-                .andExpect(status().isOk());
+                .andExpect(status().isNotFound());
         mvc.perform(put("/api/v1/other/R1/read").header("Authorization", authorization))
-                .andExpect(status().isOk());
+                .andExpect(status().isNotFound());
 
-        assertThat(BACKEND.received()).extracting(FakeService.Received::path)
-                .containsExactly("/api/v1/other/R1", "/api/v1/other",
-                        "/api/v1/other/R1/read");
-        assertThat(BACKEND.last().header("Authorization")).isEqualTo(authorization);
         assertThat(SECURITY_SERVICE.received()).isEmpty();
         assertThat(DEVICE_SERVICE.received()).isEmpty();
         assertThat(HOME_SERVICE.received()).isEmpty();
@@ -251,7 +236,6 @@ class GatewayRoutesTest extends GatewayTest {
                         "/api/v1/recommendations/R1", "/api/v1/recommendations?homeId=H1");
         assertThat(RECOMMENDATION_SERVICE.received().getFirst().header("Authorization")).isEqualTo(authorization);
         assertThat(RECOMMENDATION_SERVICE.received().getFirst().header("Origin")).isNull();
-        assertThat(BACKEND.received()).isEmpty();
     }
 
     @Test
@@ -276,7 +260,6 @@ class GatewayRoutesTest extends GatewayTest {
                         "/api/v1/alerts/A1/read", "/api/v1/alerts/A1", "/api/v1/alerts?homeId=H1");
         assertThat(ALERT_SERVICE.received().getFirst().header("Authorization")).isEqualTo(authorization);
         assertThat(ALERT_SERVICE.received().getFirst().header("Origin")).isNull();
-        assertThat(BACKEND.received()).isEmpty();
     }
 
     @Test
@@ -310,7 +293,6 @@ class GatewayRoutesTest extends GatewayTest {
                         "/api/v1/notifications/push/devices/available");
         assertThat(NOTIFICATION_SERVICE.received().getFirst().header("Authorization")).isEqualTo(authorization);
         assertThat(NOTIFICATION_SERVICE.received().getFirst().header("Origin")).isNull();
-        assertThat(BACKEND.received()).isEmpty();
     }
 
     @Test
@@ -328,7 +310,6 @@ class GatewayRoutesTest extends GatewayTest {
                 .containsExactly("/api/v1/admin/notifications", "/api/v1/admin/notifications/N1/read",
                         "/api/v1/admin/notifications/N1");
         assertThat(SECURITY_SERVICE.received()).isEmpty();
-        assertThat(BACKEND.received()).isEmpty();
     }
 
     @Test
@@ -345,14 +326,14 @@ class GatewayRoutesTest extends GatewayTest {
 
     @Test
     void tellsTheServiceWhoCalled() throws Exception {
-        mvc.perform(get("/api/v1/other").header("Authorization", bearer("use0000001"))
+        mvc.perform(get("/api/v1/alerts").header("Authorization", bearer("use0000001"))
                         .with(request -> {
                             request.setRemoteAddr("203.0.113.7");
                             return request;
                         }))
                 .andExpect(status().isOk());
 
-        assertThat(BACKEND.last().header("X-Forwarded-For")).isEqualTo("203.0.113.7");
+        assertThat(ALERT_SERVICE.last().header("X-Forwarded-For")).isEqualTo("203.0.113.7");
     }
 
     @Test
@@ -386,16 +367,15 @@ class GatewayRoutesTest extends GatewayTest {
                 .andExpect(jsonPath("$.status").value(404))
                 .andExpect(jsonPath("$.path").value("/somewhere/else"));
 
-        assertThat(BACKEND.received()).isEmpty();
         assertThat(SECURITY_SERVICE.received()).isEmpty();
         assertThat(DEVICE_SERVICE.received()).isEmpty();
     }
 
     @Test
     void answersGatewayTimeoutWhenTheServiceIsTooSlow() throws Exception {
-        mvc.perform(get("/api/v1/slow-report").header("Authorization", bearer("use0000001")))
+        mvc.perform(get("/api/v1/alerts/slow-report").header("Authorization", bearer("use0000001")))
                 .andExpect(status().isGatewayTimeout())
                 .andExpect(jsonPath("$.status").value(504))
-                .andExpect(jsonPath("$.path").value("/api/v1/slow-report"));
+                .andExpect(jsonPath("$.path").value("/api/v1/alerts/slow-report"));
     }
 }

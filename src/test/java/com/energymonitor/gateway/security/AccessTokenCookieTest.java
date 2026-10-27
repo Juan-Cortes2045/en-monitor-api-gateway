@@ -26,29 +26,29 @@ class AccessTokenCookieTest extends GatewayTest {
     void forwardsTheCookieAsABearerHeader() throws Exception {
         String token = TestTokens.valid("use0000001");
 
-        mvc.perform(get("/api/v1/other").cookie(access(token))
+        mvc.perform(get("/api/v1/alerts").cookie(access(token))
                         .header("X-Requested-With", "XMLHttpRequest"))
                 .andExpect(status().isOk());
 
-        assertThat(BACKEND.last().header("Authorization")).isEqualTo("Bearer " + token);
+        assertThat(ALERT_SERVICE.last().header("Authorization")).isEqualTo("Bearer " + token);
     }
 
     @Test
     void ignoresTheCookieWithoutTheRequestedWithHeader() throws Exception {
         // A forged cross-site request (a form, an image) cannot add the header.
-        mvc.perform(get("/api/v1/other").cookie(access(TestTokens.valid("use0000001"))))
+        mvc.perform(get("/api/v1/alerts").cookie(access(TestTokens.valid("use0000001"))))
                 .andExpect(status().isUnauthorized());
 
-        assertThat(BACKEND.received()).isEmpty();
+        assertThat(ALERT_SERVICE.received()).isEmpty();
     }
 
     @Test
     void refusesAnExpiredCookie() throws Exception {
-        mvc.perform(get("/api/v1/other").cookie(access(TestTokens.expired("use0000001")))
+        mvc.perform(get("/api/v1/alerts").cookie(access(TestTokens.expired("use0000001")))
                         .header("X-Requested-With", "XMLHttpRequest"))
                 .andExpect(status().isUnauthorized());
 
-        assertThat(BACKEND.received()).isEmpty();
+        assertThat(ALERT_SERVICE.received()).isEmpty();
     }
 
     @Test
@@ -65,11 +65,11 @@ class AccessTokenCookieTest extends GatewayTest {
     void anExplicitHeaderWins() throws Exception {
         String header = bearer("use0000002");
 
-        mvc.perform(get("/api/v1/other").cookie(access(TestTokens.valid("use0000001")))
+        mvc.perform(get("/api/v1/alerts").cookie(access(TestTokens.valid("use0000001")))
                         .header("X-Requested-With", "XMLHttpRequest")
                         .header("Authorization", header))
                 .andExpect(status().isOk());
 
-        assertThat(BACKEND.last().header("Authorization")).isEqualTo(header);
+        assertThat(ALERT_SERVICE.last().header("Authorization")).isEqualTo(header);
     }
 }

@@ -13,9 +13,8 @@ that owns it:
 | `/api/v1/notifications/**`, `/api/v1/admin/notifications/**` | en-monitor-notification-service (`:8087`) |
 | `/api/v1/alerts/**` | en-monitor-alert-service (`:8088`) |
 | `/api/v1/recommendations/**` | en-monitor-recommendation-service (`:8089`) |
-| any other `/api/v1/**` | energy-monitor-backend (`:8083`) |
 | `/internal/**` | never forwarded (401 without a token, 403 with one) |
-| anything else | 404 |
+| any other path, `/api/v1/**` included | 404 |
 
 Before forwarding, it:
 
@@ -39,8 +38,8 @@ Before forwarding, it:
 Every answer it produces itself has the same JSON shape as the services' errors
 (`timestamp`, `status`, `error`, `message`, `path`).
 
-The device and measurement routes are checked before the home service's, and all of them before
-the backend's catch-all: the devices and the consumption of a home go to their services, and the
+The device and measurement routes are checked before the home service's:
+the devices and the consumption of a home go to their services, and the
 rest of `/api/v1/homes/**` (the home, its members, favourite, owner and thresholds) to the home
 service. The broker
 authentication (`/internal/mqtt/**`) is Mosquitto's call to the device service over the private
@@ -80,7 +79,6 @@ The services on one machine:
 | en-monitor-notification-service | 8087 | `./mvnw spring-boot:run` in its repository |
 | en-monitor-alert-service | 8088 | `./mvnw spring-boot:run` in its repository |
 | en-monitor-recommendation-service | 8089 | `./mvnw spring-boot:run` in its repository |
-| energy-monitor-backend | 8083 | `./mvnw spring-boot:run` in its repository |
 
 The web app keeps `VITE_API_BASE_URL=http://localhost:8080`.
 
@@ -102,8 +100,7 @@ docker build -t energy-monitor-gateway .
 The infra repository builds the image and runs it in front of the other services
 (`infra/docker-compose.yml`, `infra/docker-compose.prod.yml`). There it publishes no port: the
 web container's nginx forwards `/api/` to `gateway:8080`, the services are reached as
-`security:8082`, `device:8084`, `measurement:8085`, `home:8086`, `notification:8087`, `alert:8088`, `recommendation:8089` and
-`backend:8083`, and it receives only
+`security:8082`, `device:8084`, `measurement:8085`, `home:8086`, `notification:8087`, `alert:8088` and `recommendation:8089`, and it receives only
 `public.pem`. Its container health is
 `/actuator/health`.
 
@@ -135,7 +132,6 @@ the key pair is generated for the run.
 | `NOTIFICATION_SERVICE_URL` | `http://localhost:8087` | en-monitor-notification-service |
 | `ALERT_SERVICE_URL` | `http://localhost:8088` | en-monitor-alert-service |
 | `RECOMMENDATION_SERVICE_URL` | `http://localhost:8089` | en-monitor-recommendation-service |
-| `BACKEND_URL` | `http://localhost:8083` | energy-monitor-backend |
 | `GATEWAY_CONNECT_TIMEOUT` | `2s` | connection to a service |
 | `GATEWAY_READ_TIMEOUT` | `30s` | answer of a service |
 | `GATEWAY_RATE_LIMIT_REQUESTS` | `20` | `POST`s per address and path in a window |
