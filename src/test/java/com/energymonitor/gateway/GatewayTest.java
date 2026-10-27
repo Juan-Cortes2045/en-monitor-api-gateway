@@ -21,6 +21,7 @@ public abstract class GatewayTest {
     protected static final FakeService MEASUREMENT_SERVICE = new FakeService("measurement");
     protected static final FakeService HOME_SERVICE = new FakeService("home");
     protected static final FakeService NOTIFICATION_SERVICE = new FakeService("notification");
+    protected static final FakeService ALERT_SERVICE = new FakeService("alert");
     protected static final FakeService BACKEND = new FakeService("backend");
 
     @DynamicPropertySource
@@ -30,6 +31,7 @@ public abstract class GatewayTest {
         registry.add("gateway.routes.measurement-service-url", MEASUREMENT_SERVICE::url);
         registry.add("gateway.routes.home-service-url", HOME_SERVICE::url);
         registry.add("gateway.routes.notification-service-url", NOTIFICATION_SERVICE::url);
+        registry.add("gateway.routes.alert-service-url", ALERT_SERVICE::url);
         registry.add("gateway.routes.backend-url", BACKEND::url);
         registry.add("security.jwt.public-key-path", TestTokens::publicKeyFile);
         registry.add("security.cors.allowed-origins", () -> WEB_ORIGIN);
@@ -42,6 +44,7 @@ public abstract class GatewayTest {
         MEASUREMENT_SERVICE.reset();
         HOME_SERVICE.reset();
         NOTIFICATION_SERVICE.reset();
+        ALERT_SERVICE.reset();
         BACKEND.reset();
     }
 

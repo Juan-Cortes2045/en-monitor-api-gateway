@@ -29,6 +29,7 @@ import org.springframework.web.servlet.function.ServerResponse;
  *       up there;</li>
  *   <li>{@code /api/v1/notifications/**} and {@code /api/v1/admin/notifications/**} go to the
  *       notification service;</li>
+ *   <li>{@code /api/v1/alerts/**} goes to the alert service;</li>
  *   <li>every other {@code /api/v1/**} goes to energy-monitor-backend.</li>
  * </ol>
  *
@@ -75,6 +76,11 @@ public class GatewayRoutes {
             "/api/v1/admin/notifications/**"
     };
 
+    /** The paths the alert service serves: the alerts of a home. */
+    static final String[] ALERT_SERVICE_PATHS = {
+            "/api/v1/alerts/**"
+    };
+
     @Bean
     public RouterFunction<ServerResponse> apiRoutes(GatewayRoutesProperties properties) {
         RouterFunction<ServerResponse> securityService = route("security-service")
@@ -102,6 +108,11 @@ public class GatewayRoutes {
                 .before(uri(properties.notificationServiceUrl()))
                 .before(removeRequestHeader(HttpHeaders.ORIGIN))
                 .build();
+        RouterFunction<ServerResponse> alertService = route("alert-service")
+                .route(anyOf(ALERT_SERVICE_PATHS), http())
+                .before(uri(properties.alertServiceUrl()))
+                .before(removeRequestHeader(HttpHeaders.ORIGIN))
+                .build();
         RouterFunction<ServerResponse> backend = route("backend")
                 .route(path("/api/v1/**"), http())
                 .before(uri(properties.backendUrl()))
@@ -109,7 +120,7 @@ public class GatewayRoutes {
                 .build();
         // The order is the precedence: /homes/*/devices and /homes/*/consumption before /homes/**.
         return securityService.and(deviceService).and(measurementService).and(homeService)
-                .and(notificationService).and(backend);
+                .and(notificationService).and(alertService).and(backend);
     }
 
     private static RequestPredicate anyOf(String... patterns) {

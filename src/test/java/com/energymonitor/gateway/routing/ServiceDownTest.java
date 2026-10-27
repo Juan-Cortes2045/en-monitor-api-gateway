@@ -28,6 +28,7 @@ class ServiceDownTest {
         registry.add("gateway.routes.measurement-service-url", () -> "http://127.0.0.1:9");
         registry.add("gateway.routes.home-service-url", () -> "http://127.0.0.1:9");
         registry.add("gateway.routes.notification-service-url", () -> "http://127.0.0.1:9");
+        registry.add("gateway.routes.alert-service-url", () -> "http://127.0.0.1:9");
         registry.add("gateway.routes.backend-url", () -> "http://127.0.0.1:9");
         registry.add("security.jwt.public-key-path", TestTokens::publicKeyFile);
     }
@@ -56,6 +57,14 @@ class ServiceDownTest {
                         .header("Authorization", "Bearer " + TestTokens.valid("use0000001")))
                 .andExpect(status().isServiceUnavailable())
                 .andExpect(jsonPath("$.path").value("/api/v1/notifications/preferences"));
+    }
+
+    @Test
+    void answersServiceUnavailableWhenTheAlertServiceIsDown() throws Exception {
+        mvc.perform(get("/api/v1/alerts").param("homeId", "H1")
+                        .header("Authorization", "Bearer " + TestTokens.valid("use0000001")))
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(jsonPath("$.path").value("/api/v1/alerts"));
     }
 
     @Test

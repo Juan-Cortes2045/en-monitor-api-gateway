@@ -15,6 +15,7 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
  *                           the home types
  * @param notificationServiceUrl en-monitor-notification-service: a user's notification channels
  *                               and the administrator notifications
+ * @param alertServiceUrl en-monitor-alert-service: the alerts of a home
  * @param backendUrl         energy-monitor-backend: everything else under {@code /api/v1}
  */
 @ConfigurationProperties(prefix = "gateway.routes")
@@ -24,5 +25,6 @@ public record GatewayRoutesProperties(
         @DefaultValue("http://localhost:8085") URI measurementServiceUrl,
         @DefaultValue("http://localhost:8086") URI homeServiceUrl,
         @DefaultValue("http://localhost:8087") URI notificationServiceUrl,
+        @DefaultValue("http://localhost:8088") URI alertServiceUrl,
         @DefaultValue("http://localhost:8083") URI backendUrl) {
 }

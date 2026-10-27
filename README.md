@@ -11,6 +11,7 @@ that owns it:
 | `/api/v1/measurements/**`, `/api/v1/consumption-levels/**`, `/api/v1/homes/{homeId}/consumption/**` | en-monitor-measurement-service (`:8085`) |
 | `/api/v1/homes/**` (the rest of it), `/api/v1/home-types/**` | en-monitor-home-service (`:8086`) |
 | `/api/v1/notifications/**`, `/api/v1/admin/notifications/**` | en-monitor-notification-service (`:8087`) |
+| `/api/v1/alerts/**` | en-monitor-alert-service (`:8088`) |
 | any other `/api/v1/**` | energy-monitor-backend (`:8083`) |
 | `/internal/**` | never forwarded (401 without a token, 403 with one) |
 | anything else | 404 |
@@ -76,6 +77,7 @@ The services on one machine:
 | en-monitor-measurement-service | 8085 | `./mvnw spring-boot:run` in its repository |
 | en-monitor-home-service | 8086 | `./mvnw spring-boot:run` in its repository |
 | en-monitor-notification-service | 8087 | `./mvnw spring-boot:run` in its repository |
+| en-monitor-alert-service | 8088 | `./mvnw spring-boot:run` in its repository |
 | energy-monitor-backend | 8083 | `./mvnw spring-boot:run` in its repository |
 
 The web app keeps `VITE_API_BASE_URL=http://localhost:8080`.
@@ -98,7 +100,7 @@ docker build -t energy-monitor-gateway .
 The infra repository builds the image and runs it in front of the other services
 (`infra/docker-compose.yml`, `infra/docker-compose.prod.yml`). There it publishes no port: the
 web container's nginx forwards `/api/` to `gateway:8080`, the services are reached as
-`security:8082`, `device:8084`, `measurement:8085`, `home:8086`, `notification:8087` and
+`security:8082`, `device:8084`, `measurement:8085`, `home:8086`, `notification:8087`, `alert:8088` and
 `backend:8083`, and it receives only
 `public.pem`. Its container health is
 `/actuator/health`.
@@ -129,6 +131,7 @@ the key pair is generated for the run.
 | `MEASUREMENT_SERVICE_URL` | `http://localhost:8085` | en-monitor-measurement-service |
 | `HOME_SERVICE_URL` | `http://localhost:8086` | en-monitor-home-service |
 | `NOTIFICATION_SERVICE_URL` | `http://localhost:8087` | en-monitor-notification-service |
+| `ALERT_SERVICE_URL` | `http://localhost:8088` | en-monitor-alert-service |
 | `BACKEND_URL` | `http://localhost:8083` | energy-monitor-backend |
 | `GATEWAY_CONNECT_TIMEOUT` | `2s` | connection to a service |
 | `GATEWAY_READ_TIMEOUT` | `30s` | answer of a service |
