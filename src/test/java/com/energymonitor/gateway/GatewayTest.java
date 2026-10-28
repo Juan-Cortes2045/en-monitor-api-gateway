@@ -7,7 +7,7 @@ import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 
 /**
- * The gateway in front of four fake services. Shared by the tests that need a running context, so
+ * The gateway in front of six fake services. Shared by the tests that need a running context, so
  * they all reuse one.
  */
 @SpringBootTest
@@ -19,14 +19,20 @@ public abstract class GatewayTest {
     protected static final FakeService SECURITY_SERVICE = new FakeService("security");
     protected static final FakeService DEVICE_SERVICE = new FakeService("device");
     protected static final FakeService MEASUREMENT_SERVICE = new FakeService("measurement");
-    protected static final FakeService BACKEND = new FakeService("backend");
+    protected static final FakeService HOME_SERVICE = new FakeService("home");
+    protected static final FakeService NOTIFICATION_SERVICE = new FakeService("notification");
+    protected static final FakeService ALERT_SERVICE = new FakeService("alert");
+    protected static final FakeService RECOMMENDATION_SERVICE = new FakeService("recommendation");
 
     @DynamicPropertySource
     static void services(DynamicPropertyRegistry registry) {
         registry.add("gateway.routes.security-service-url", SECURITY_SERVICE::url);
         registry.add("gateway.routes.device-service-url", DEVICE_SERVICE::url);
         registry.add("gateway.routes.measurement-service-url", MEASUREMENT_SERVICE::url);
-        registry.add("gateway.routes.backend-url", BACKEND::url);
+        registry.add("gateway.routes.home-service-url", HOME_SERVICE::url);
+        registry.add("gateway.routes.notification-service-url", NOTIFICATION_SERVICE::url);
+        registry.add("gateway.routes.alert-service-url", ALERT_SERVICE::url);
+        registry.add("gateway.routes.recommendation-service-url", RECOMMENDATION_SERVICE::url);
         registry.add("security.jwt.public-key-path", TestTokens::publicKeyFile);
         registry.add("security.cors.allowed-origins", () -> WEB_ORIGIN);
     }
@@ -36,7 +42,10 @@ public abstract class GatewayTest {
         SECURITY_SERVICE.reset();
         DEVICE_SERVICE.reset();
         MEASUREMENT_SERVICE.reset();
-        BACKEND.reset();
+        HOME_SERVICE.reset();
+        NOTIFICATION_SERVICE.reset();
+        ALERT_SERVICE.reset();
+        RECOMMENDATION_SERVICE.reset();
     }
 
     protected static String bearer(String subject) {

@@ -24,6 +24,8 @@ client ──► nginx (HTTPS) ──► gateway :8080
                                ├──► en-monitor-device-service :8084     /api/v1/homes/*/devices/**, /api/v1/appliance-types/**
                                ├──► en-monitor-measurement-service :8085 /api/v1/measurements/**, /api/v1/consumption-levels/**,
                                │                                         /api/v1/homes/*/consumption/**
+                               ├──► en-monitor-home-service :8086       the rest of /api/v1/homes/**, /api/v1/home-types/**
+                               ├──► en-monitor-notification-service :8087 /api/v1/notifications/**, /api/v1/admin/notifications/**
                                └──► energy-monitor-backend :8083        any other /api/v1/**
 ```
 
@@ -43,9 +45,10 @@ client ──► nginx (HTTPS) ──► gateway :8080
   network, with their own token.
 - **The rate limit is in memory.** It is per instance and starts again on restart; enough for one
   instance. Several instances would need a shared store (Redis).
-- **Routes by path prefix, most specific first.** The device and measurement routes are matched before the
-  backend's `/api/v1/**`, so moving a module out of the backend only adds a route here; the paths
-  the clients call do not change.
+- **Routes by path prefix, most specific first.** The device and measurement routes are matched
+  before the home service's `/api/v1/homes/**`, and all of them before the backend's `/api/v1/**`,
+  so moving a module out of the backend only adds a route here; the paths the clients call do not
+  change.
 - **Apache HttpClient 5** forwards the requests: the JDK client fails on a `DELETE` without a body.
 
 ## Migration status
@@ -59,3 +62,13 @@ home and the appliance catalogue; the clients call the same paths as before.
 
 The measurement service migration (see en-monitor-measurement-service) added the route to the
 readings, the consumption of a home and the consumption levels, with the same paths as before.
+
+The home service migration (see en-monitor-home-service) added the route to the homes, their
+members and thresholds, and the home types, with the same paths as before. The home service must
+be running before a gateway with this route is deployed: until then those paths answer 503.
+
+The notification service migration (see en-monitor-notification-service) added the route to a
+user's notification channels and the administrator notifications, with the same paths as before.
+`/api/v1/admin/notifications/**` is not one of the security service's admin paths, so it reaches
+this route. The notification service must be running before a gateway with this route is
+deployed: until then those paths answer 503.

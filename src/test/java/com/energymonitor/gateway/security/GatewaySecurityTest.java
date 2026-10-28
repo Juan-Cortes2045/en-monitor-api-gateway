@@ -29,7 +29,6 @@ class GatewaySecurityTest extends GatewayTest {
                 .andExpect(jsonPath("$.status").value(401))
                 .andExpect(jsonPath("$.path").value("/api/v1/homes"));
 
-        assertThat(BACKEND.received()).isEmpty();
     }
 
     @Test
@@ -83,7 +82,6 @@ class GatewaySecurityTest extends GatewayTest {
                 .andExpect(status().isForbidden());
 
         assertThat(DEVICE_SERVICE.received()).isEmpty();
-        assertThat(BACKEND.received()).isEmpty();
     }
 
     @ParameterizedTest
@@ -108,7 +106,6 @@ class GatewaySecurityTest extends GatewayTest {
 
         assertThat(SECURITY_SERVICE.received()).isEmpty();
         assertThat(DEVICE_SERVICE.received()).isEmpty();
-        assertThat(BACKEND.received()).isEmpty();
     }
 
     @Test
@@ -121,7 +118,6 @@ class GatewaySecurityTest extends GatewayTest {
                 .andExpect(header().string("Access-Control-Allow-Origin", WEB_ORIGIN))
                 .andExpect(header().string("Access-Control-Allow-Methods", org.hamcrest.Matchers.containsString("DELETE")));
 
-        assertThat(BACKEND.received()).isEmpty();
     }
 
     @Test
@@ -131,17 +127,16 @@ class GatewaySecurityTest extends GatewayTest {
                         .header("Access-Control-Request-Method", "GET"))
                 .andExpect(status().isForbidden());
 
-        assertThat(BACKEND.received()).isEmpty();
     }
 
     @Test
     void answersCorsOnceAndHidesTheOriginFromTheService() throws Exception {
-        mvc.perform(get("/api/v1/homes").header("Origin", WEB_ORIGIN)
+        mvc.perform(get("/api/v1/alerts").header("Origin", WEB_ORIGIN)
                         .header("Authorization", bearer("use0000001")))
                 .andExpect(status().isOk())
                 .andExpect(header().stringValues("Access-Control-Allow-Origin", WEB_ORIGIN));
 
-        assertThat(BACKEND.last().header("Origin")).isNull();
+        assertThat(ALERT_SERVICE.last().header("Origin")).isNull();
     }
 
     @Test
@@ -166,6 +161,5 @@ class GatewaySecurityTest extends GatewayTest {
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.status").value(401));
 
-        assertThat(BACKEND.received()).isEmpty();
     }
 }

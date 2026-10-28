@@ -26,7 +26,10 @@ class ServiceDownTest {
         registry.add("gateway.routes.security-service-url", () -> "http://127.0.0.1:9");
         registry.add("gateway.routes.device-service-url", () -> "http://127.0.0.1:9");
         registry.add("gateway.routes.measurement-service-url", () -> "http://127.0.0.1:9");
-        registry.add("gateway.routes.backend-url", () -> "http://127.0.0.1:9");
+        registry.add("gateway.routes.home-service-url", () -> "http://127.0.0.1:9");
+        registry.add("gateway.routes.notification-service-url", () -> "http://127.0.0.1:9");
+        registry.add("gateway.routes.alert-service-url", () -> "http://127.0.0.1:9");
+        registry.add("gateway.routes.recommendation-service-url", () -> "http://127.0.0.1:9");
         registry.add("security.jwt.public-key-path", TestTokens::publicKeyFile);
     }
 
@@ -38,6 +41,38 @@ class ServiceDownTest {
                 .andExpect(jsonPath("$.status").value(503))
                 .andExpect(jsonPath("$.path").value("/api/v1/homes"))
                 .andExpect(jsonPath("$.message").value("The service is not available. Try again later."));
+    }
+
+    @Test
+    void answersServiceUnavailableWhenTheHomeServiceIsDown() throws Exception {
+        mvc.perform(get("/api/v1/homes/H1/members")
+                        .header("Authorization", "Bearer " + TestTokens.valid("use0000001")))
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(jsonPath("$.path").value("/api/v1/homes/H1/members"));
+    }
+
+    @Test
+    void answersServiceUnavailableWhenTheNotificationServiceIsDown() throws Exception {
+        mvc.perform(get("/api/v1/notifications/preferences")
+                        .header("Authorization", "Bearer " + TestTokens.valid("use0000001")))
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(jsonPath("$.path").value("/api/v1/notifications/preferences"));
+    }
+
+    @Test
+    void answersServiceUnavailableWhenTheRecommendationServiceIsDown() throws Exception {
+        mvc.perform(get("/api/v1/recommendations").param("homeId", "H1")
+                        .header("Authorization", "Bearer " + TestTokens.valid("use0000001")))
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(jsonPath("$.path").value("/api/v1/recommendations"));
+    }
+
+    @Test
+    void answersServiceUnavailableWhenTheAlertServiceIsDown() throws Exception {
+        mvc.perform(get("/api/v1/alerts").param("homeId", "H1")
+                        .header("Authorization", "Bearer " + TestTokens.valid("use0000001")))
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(jsonPath("$.path").value("/api/v1/alerts"));
     }
 
     @Test

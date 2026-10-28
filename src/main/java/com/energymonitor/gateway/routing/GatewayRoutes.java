@@ -24,7 +24,13 @@ import org.springframework.web.servlet.function.ServerResponse;
  *       device service;</li>
  *   <li>{@code /api/v1/measurements/**}, {@code /api/v1/consumption-levels/**} and
  *       {@code /api/v1/homes/{homeId}/consumption/**} go to the measurement service;</li>
- *   <li>every other {@code /api/v1/**} goes to energy-monitor-backend.</li>
+ *   <li>the rest of {@code /api/v1/homes/**}, and {@code /api/v1/home-types/**}, go to the home
+ *       service: after the two above, so the devices and the consumption of a home do not end
+ *       up there;</li>
+ *   <li>{@code /api/v1/notifications/**} and {@code /api/v1/admin/notifications/**} go to the
+ *       notification service;</li>
+ *   <li>{@code /api/v1/alerts/**} goes to the alert service;</li>
+ *   <li>{@code /api/v1/recommendations/**} goes to the recommendation service.</li>
  * </ol>
  *
  * <p>Nothing else is forwarded: {@code /internal/**} (the calls between the services) is refused
@@ -58,6 +64,28 @@ public class GatewayRoutes {
             "/api/v1/homes/*/consumption/**"
     };
 
+    /** The paths the home service serves, once the device and measurement ones are discounted. */
+    static final String[] HOME_SERVICE_PATHS = {
+            "/api/v1/homes/**",
+            "/api/v1/home-types/**"
+    };
+
+    /** The paths the notification service serves: a user's channels and the administrator notifications. */
+    static final String[] NOTIFICATION_SERVICE_PATHS = {
+            "/api/v1/notifications/**",
+            "/api/v1/admin/notifications/**"
+    };
+
+    /** The paths the alert service serves: the alerts of a home. */
+    static final String[] ALERT_SERVICE_PATHS = {
+            "/api/v1/alerts/**"
+    };
+
+    /** The paths the recommendation service serves: the recommendations of a home. */
+    static final String[] RECOMMENDATION_SERVICE_PATHS = {
+            "/api/v1/recommendations/**"
+    };
+
     @Bean
     public RouterFunction<ServerResponse> apiRoutes(GatewayRoutesProperties properties) {
         RouterFunction<ServerResponse> securityService = route("security-service")
@@ -75,12 +103,29 @@ public class GatewayRoutes {
                 .before(uri(properties.measurementServiceUrl()))
                 .before(removeRequestHeader(HttpHeaders.ORIGIN))
                 .build();
-        RouterFunction<ServerResponse> backend = route("backend")
-                .route(path("/api/v1/**"), http())
-                .before(uri(properties.backendUrl()))
+        RouterFunction<ServerResponse> homeService = route("home-service")
+                .route(anyOf(HOME_SERVICE_PATHS), http())
+                .before(uri(properties.homeServiceUrl()))
                 .before(removeRequestHeader(HttpHeaders.ORIGIN))
                 .build();
-        return securityService.and(deviceService).and(measurementService).and(backend);
+        RouterFunction<ServerResponse> notificationService = route("notification-service")
+                .route(anyOf(NOTIFICATION_SERVICE_PATHS), http())
+                .before(uri(properties.notificationServiceUrl()))
+                .before(removeRequestHeader(HttpHeaders.ORIGIN))
+                .build();
+        RouterFunction<ServerResponse> alertService = route("alert-service")
+                .route(anyOf(ALERT_SERVICE_PATHS), http())
+                .before(uri(properties.alertServiceUrl()))
+                .before(removeRequestHeader(HttpHeaders.ORIGIN))
+                .build();
+        RouterFunction<ServerResponse> recommendationService = route("recommendation-service")
+                .route(anyOf(RECOMMENDATION_SERVICE_PATHS), http())
+                .before(uri(properties.recommendationServiceUrl()))
+                .before(removeRequestHeader(HttpHeaders.ORIGIN))
+                .build();
+        // The order is the precedence: /homes/*/devices and /homes/*/consumption before /homes/**.
+        return securityService.and(deviceService).and(measurementService).and(homeService)
+                .and(notificationService).and(alertService).and(recommendationService);
     }
 
     private static RequestPredicate anyOf(String... patterns) {

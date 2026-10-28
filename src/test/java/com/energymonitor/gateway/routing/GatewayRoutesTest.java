@@ -33,7 +33,6 @@ class GatewayRoutesTest extends GatewayTest {
         assertThat(received.method()).isEqualTo("POST");
         assertThat(received.path()).isEqualTo("/api/v1/auth/login");
         assertThat(received.body()).isEqualTo("{\"email\":\"ana@example.com\",\"password\":\"x\"}");
-        assertThat(BACKEND.received()).isEmpty();
     }
 
     @Test
@@ -43,7 +42,6 @@ class GatewayRoutesTest extends GatewayTest {
                 .andExpect(jsonPath("$.service").value("security"));
 
         assertThat(SECURITY_SERVICE.last().path()).isEqualTo("/api/v1/support/contacts");
-        assertThat(BACKEND.received()).isEmpty();
     }
 
     @Test
@@ -60,7 +58,6 @@ class GatewayRoutesTest extends GatewayTest {
         assertThat(SECURITY_SERVICE.received()).extracting(FakeService.Received::path)
                 .containsExactly("/api/v1/admin/users?page=1", "/api/v1/admin/roles",
                         "/api/v1/admin/users/use0000001/roles/ADMIN");
-        assertThat(BACKEND.received()).isEmpty();
     }
 
     @Test
@@ -91,7 +88,6 @@ class GatewayRoutesTest extends GatewayTest {
         assertThat(DEVICE_SERVICE.received().get(1).body()).isEqualTo("{\"deviceCode\":\"ABC123\"}");
         assertThat(DEVICE_SERVICE.last().header("Authorization")).isEqualTo(authorization);
         assertThat(DEVICE_SERVICE.last().header("Origin")).isNull();
-        assertThat(BACKEND.received()).isEmpty();
         assertThat(SECURITY_SERVICE.received()).isEmpty();
     }
 
@@ -104,7 +100,6 @@ class GatewayRoutesTest extends GatewayTest {
 
         assertThat(DEVICE_SERVICE.last().path()).isEqualTo("/api/v1/appliance-types");
         assertThat(DEVICE_SERVICE.last().header("Origin")).isNull();
-        assertThat(BACKEND.received()).isEmpty();
     }
 
     @Test
@@ -137,63 +132,220 @@ class GatewayRoutesTest extends GatewayTest {
                         "/api/v1/homes/H1/consumption/history?period=week");
         assertThat(MEASUREMENT_SERVICE.received().getFirst().header("Authorization")).isEqualTo(authorization);
         assertThat(MEASUREMENT_SERVICE.received().getFirst().header("Origin")).isNull();
-        assertThat(BACKEND.received()).isEmpty();
         assertThat(DEVICE_SERVICE.received()).isEmpty();
     }
 
     @Test
-    void keepsTheRestOfAHomeInTheBackend() throws Exception {
+    void sendsTheHomesTheirMembersAndThresholdsToTheHomeService() throws Exception {
         String authorization = bearer("use0000001");
 
-        mvc.perform(get("/api/v1/homes/H1").header("Authorization", authorization))
+        mvc.perform(get("/api/v1/homes").header("Authorization", authorization).header("Origin", WEB_ORIGIN))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.service").value("home"));
+        mvc.perform(post("/api/v1/homes").header("Authorization", authorization))
+                .andExpect(status().isOk());
+        mvc.perform(post("/api/v1/homes/join").header("Authorization", authorization))
+                .andExpect(status().isOk());
+        mvc.perform(delete("/api/v1/homes/H1").header("Authorization", authorization))
                 .andExpect(status().isOk());
         mvc.perform(get("/api/v1/homes/H1/members").header("Authorization", authorization))
                 .andExpect(status().isOk());
-        mvc.perform(get("/api/v1/homes/H1/devices-report").header("Authorization", authorization))
+        mvc.perform(delete("/api/v1/homes/H1/members/me").header("Authorization", authorization))
+                .andExpect(status().isOk());
+        mvc.perform(put("/api/v1/homes/H1/favorite").header("Authorization", authorization))
+                .andExpect(status().isOk());
+        mvc.perform(put("/api/v1/homes/H1/owner").header("Authorization", authorization))
                 .andExpect(status().isOk());
         mvc.perform(get("/api/v1/homes/H1/thresholds").header("Authorization", authorization))
                 .andExpect(status().isOk());
-        mvc.perform(post("/api/v1/notifications/push/devices").header("Authorization", authorization))
+        mvc.perform(post("/api/v1/homes/H1/thresholds/defaults").header("Authorization", authorization))
                 .andExpect(status().isOk());
 
-        assertThat(BACKEND.received()).extracting(FakeService.Received::path)
-                .containsExactly("/api/v1/homes/H1", "/api/v1/homes/H1/members",
-                        "/api/v1/homes/H1/devices-report", "/api/v1/homes/H1/thresholds",
-                        "/api/v1/notifications/push/devices");
+        assertThat(HOME_SERVICE.received()).extracting(FakeService.Received::path)
+                .containsExactly("/api/v1/homes", "/api/v1/homes", "/api/v1/homes/join",
+                        "/api/v1/homes/H1", "/api/v1/homes/H1/members", "/api/v1/homes/H1/members/me",
+                        "/api/v1/homes/H1/favorite", "/api/v1/homes/H1/owner",
+                        "/api/v1/homes/H1/thresholds", "/api/v1/homes/H1/thresholds/defaults");
+        assertThat(HOME_SERVICE.received().getFirst().header("Authorization")).isEqualTo(authorization);
+        assertThat(HOME_SERVICE.received().getFirst().header("Origin")).isNull();
         assertThat(DEVICE_SERVICE.received()).isEmpty();
         assertThat(MEASUREMENT_SERVICE.received()).isEmpty();
     }
 
     @Test
-    void sendsEverythingElseToTheBackendWithTheToken() throws Exception {
+    void sendsTheHomeTypeCatalogueToTheHomeService() throws Exception {
         String authorization = bearer("use0000001");
 
-        mvc.perform(get("/api/v1/homes").header("Authorization", authorization))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.service").value("backend"));
-        mvc.perform(get("/api/v1/admin/notifications").header("Authorization", authorization))
+        mvc.perform(get("/api/v1/home-types").header("Authorization", authorization))
                 .andExpect(status().isOk());
-        mvc.perform(delete("/api/v1/homes/H1/members/me").header("Authorization", authorization))
+        mvc.perform(get("/api/v1/home-types/hous000001").header("Authorization", authorization))
                 .andExpect(status().isOk());
 
-        assertThat(BACKEND.received()).extracting(FakeService.Received::path)
-                .containsExactly("/api/v1/homes", "/api/v1/admin/notifications",
-                        "/api/v1/homes/H1/members/me");
-        assertThat(BACKEND.last().header("Authorization")).isEqualTo(authorization);
+        assertThat(HOME_SERVICE.received()).extracting(FakeService.Received::path)
+                .containsExactly("/api/v1/home-types", "/api/v1/home-types/hous000001");
+    }
+
+    @Test
+    void keepsTheDevicesAndTheConsumptionOfAHomeOutOfTheHomeService() throws Exception {
+        String authorization = bearer("use0000001");
+
+        mvc.perform(get("/api/v1/homes/H1/devices").header("Authorization", authorization))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.service").value("device"));
+        mvc.perform(get("/api/v1/homes/H1/consumption/summary").header("Authorization", authorization))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.service").value("measurement"));
+
+        assertThat(HOME_SERVICE.received()).isEmpty();
+    }
+
+    @Test
+    void answersNotFoundForAPathNoServiceServes() throws Exception {
+        String authorization = bearer("use0000001");
+
+        mvc.perform(get("/api/v1/other/R1").header("Authorization", authorization))
+                .andExpect(status().isNotFound());
+        mvc.perform(put("/api/v1/other/R1/read").header("Authorization", authorization))
+                .andExpect(status().isNotFound());
+
         assertThat(SECURITY_SERVICE.received()).isEmpty();
         assertThat(DEVICE_SERVICE.received()).isEmpty();
+        assertThat(HOME_SERVICE.received()).isEmpty();
+        assertThat(NOTIFICATION_SERVICE.received()).isEmpty();
+        assertThat(ALERT_SERVICE.received()).isEmpty();
+        assertThat(RECOMMENDATION_SERVICE.received()).isEmpty();
+    }
+
+    @Test
+    void sendsTheRecommendationsToTheRecommendationService() throws Exception {
+        String authorization = bearer("use0000001");
+
+        mvc.perform(get("/api/v1/recommendations").param("homeId", "H1").header("Authorization", authorization)
+                        .header("Origin", WEB_ORIGIN))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.service").value("recommendation"));
+        mvc.perform(put("/api/v1/recommendations/R1/read").header("Authorization", authorization))
+                .andExpect(status().isOk());
+        mvc.perform(delete("/api/v1/recommendations/R1").header("Authorization", authorization))
+                .andExpect(status().isOk());
+        mvc.perform(delete("/api/v1/recommendations").param("homeId", "H1").header("Authorization", authorization))
+                .andExpect(status().isOk());
+
+        assertThat(RECOMMENDATION_SERVICE.received()).extracting(FakeService.Received::path)
+                .containsExactly("/api/v1/recommendations?homeId=H1", "/api/v1/recommendations/R1/read",
+                        "/api/v1/recommendations/R1", "/api/v1/recommendations?homeId=H1");
+        assertThat(RECOMMENDATION_SERVICE.received().getFirst().header("Authorization")).isEqualTo(authorization);
+        assertThat(RECOMMENDATION_SERVICE.received().getFirst().header("Origin")).isNull();
+    }
+
+    @Test
+    void sendsTheAlertsToTheAlertService() throws Exception {
+        String authorization = bearer("use0000001");
+
+        mvc.perform(get("/api/v1/alerts").param("homeId", "H1").header("Authorization", authorization)
+                        .header("Origin", WEB_ORIGIN))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.service").value("alert"));
+        mvc.perform(get("/api/v1/alerts/A1").header("Authorization", authorization))
+                .andExpect(status().isOk());
+        mvc.perform(put("/api/v1/alerts/A1/read").header("Authorization", authorization))
+                .andExpect(status().isOk());
+        mvc.perform(delete("/api/v1/alerts/A1").header("Authorization", authorization))
+                .andExpect(status().isOk());
+        mvc.perform(delete("/api/v1/alerts").param("homeId", "H1").header("Authorization", authorization))
+                .andExpect(status().isOk());
+
+        assertThat(ALERT_SERVICE.received()).extracting(FakeService.Received::path)
+                .containsExactly("/api/v1/alerts?homeId=H1", "/api/v1/alerts/A1",
+                        "/api/v1/alerts/A1/read", "/api/v1/alerts/A1", "/api/v1/alerts?homeId=H1");
+        assertThat(ALERT_SERVICE.received().getFirst().header("Authorization")).isEqualTo(authorization);
+        assertThat(ALERT_SERVICE.received().getFirst().header("Origin")).isNull();
+    }
+
+    @Test
+    void sendsTheNotificationChannelsToTheNotificationService() throws Exception {
+        String authorization = bearer("use0000001");
+
+        mvc.perform(get("/api/v1/notifications/preferences").header("Authorization", authorization)
+                        .header("Origin", WEB_ORIGIN))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.service").value("notification"));
+        mvc.perform(put("/api/v1/notifications/preferences").header("Authorization", authorization))
+                .andExpect(status().isOk());
+        mvc.perform(get("/api/v1/notifications/push/public-key").header("Authorization", authorization))
+                .andExpect(status().isOk());
+        mvc.perform(post("/api/v1/notifications/push/subscriptions").header("Authorization", authorization))
+                .andExpect(status().isOk());
+        mvc.perform(post("/api/v1/notifications/push/subscriptions/remove").header("Authorization", authorization))
+                .andExpect(status().isOk());
+        mvc.perform(post("/api/v1/notifications/push/devices").header("Authorization", authorization))
+                .andExpect(status().isOk());
+        mvc.perform(post("/api/v1/notifications/push/devices/remove").header("Authorization", authorization))
+                .andExpect(status().isOk());
+        mvc.perform(get("/api/v1/notifications/push/devices/available").header("Authorization", authorization))
+                .andExpect(status().isOk());
+
+        assertThat(NOTIFICATION_SERVICE.received()).extracting(FakeService.Received::path)
+                .containsExactly("/api/v1/notifications/preferences", "/api/v1/notifications/preferences",
+                        "/api/v1/notifications/push/public-key", "/api/v1/notifications/push/subscriptions",
+                        "/api/v1/notifications/push/subscriptions/remove", "/api/v1/notifications/push/devices",
+                        "/api/v1/notifications/push/devices/remove",
+                        "/api/v1/notifications/push/devices/available");
+        assertThat(NOTIFICATION_SERVICE.received().getFirst().header("Authorization")).isEqualTo(authorization);
+        assertThat(NOTIFICATION_SERVICE.received().getFirst().header("Origin")).isNull();
+    }
+
+    @Test
+    void sendsTheAdministratorNotificationsToTheNotificationService() throws Exception {
+        String authorization = bearer("use0000001");
+
+        mvc.perform(get("/api/v1/admin/notifications").header("Authorization", authorization))
+                .andExpect(status().isOk());
+        mvc.perform(put("/api/v1/admin/notifications/N1/read").header("Authorization", authorization))
+                .andExpect(status().isOk());
+        mvc.perform(delete("/api/v1/admin/notifications/N1").header("Authorization", authorization))
+                .andExpect(status().isOk());
+
+        assertThat(NOTIFICATION_SERVICE.received()).extracting(FakeService.Received::path)
+                .containsExactly("/api/v1/admin/notifications", "/api/v1/admin/notifications/N1/read",
+                        "/api/v1/admin/notifications/N1");
+        assertThat(SECURITY_SERVICE.received()).isEmpty();
+    }
+
+    @Test
+    void tellsTheNotificationServiceWhoCalled() throws Exception {
+        mvc.perform(get("/api/v1/notifications/preferences").header("Authorization", bearer("use0000001"))
+                        .with(request -> {
+                            request.setRemoteAddr("203.0.113.11");
+                            return request;
+                        }))
+                .andExpect(status().isOk());
+
+        assertThat(NOTIFICATION_SERVICE.last().header("X-Forwarded-For")).isEqualTo("203.0.113.11");
     }
 
     @Test
     void tellsTheServiceWhoCalled() throws Exception {
-        mvc.perform(get("/api/v1/homes").header("Authorization", bearer("use0000001"))
+        mvc.perform(get("/api/v1/alerts").header("Authorization", bearer("use0000001"))
                         .with(request -> {
                             request.setRemoteAddr("203.0.113.7");
                             return request;
                         }))
                 .andExpect(status().isOk());
 
-        assertThat(BACKEND.last().header("X-Forwarded-For")).isEqualTo("203.0.113.7");
+        assertThat(ALERT_SERVICE.last().header("X-Forwarded-For")).isEqualTo("203.0.113.7");
+    }
+
+    @Test
+    void tellsTheHomeServiceWhoCalled() throws Exception {
+        mvc.perform(get("/api/v1/homes").header("Authorization", bearer("use0000001"))
+                        .with(request -> {
+                            request.setRemoteAddr("203.0.113.9");
+                            return request;
+                        }))
+                .andExpect(status().isOk());
+
+        assertThat(HOME_SERVICE.last().header("X-Forwarded-For")).isEqualTo("203.0.113.9");
     }
 
     @Test
@@ -215,16 +367,15 @@ class GatewayRoutesTest extends GatewayTest {
                 .andExpect(jsonPath("$.status").value(404))
                 .andExpect(jsonPath("$.path").value("/somewhere/else"));
 
-        assertThat(BACKEND.received()).isEmpty();
         assertThat(SECURITY_SERVICE.received()).isEmpty();
         assertThat(DEVICE_SERVICE.received()).isEmpty();
     }
 
     @Test
     void answersGatewayTimeoutWhenTheServiceIsTooSlow() throws Exception {
-        mvc.perform(get("/api/v1/slow-report").header("Authorization", bearer("use0000001")))
+        mvc.perform(get("/api/v1/alerts/slow-report").header("Authorization", bearer("use0000001")))
                 .andExpect(status().isGatewayTimeout())
                 .andExpect(jsonPath("$.status").value(504))
-                .andExpect(jsonPath("$.path").value("/api/v1/slow-report"));
+                .andExpect(jsonPath("$.path").value("/api/v1/alerts/slow-report"));
     }
 }
